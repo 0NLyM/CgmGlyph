@@ -2,6 +2,8 @@ package it.mattia.glucoseglyph.glyph
 
 import it.mattia.glucoseglyph.model.GlucoseReading
 import it.mattia.glucoseglyph.model.Trend
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 /**
@@ -11,17 +13,27 @@ import kotlin.math.roundToInt
  * Style notes (deliberately minimal, "Nothing"-esque): the matrix is monochrome hardware, so the
  * only expressive dimension left is brightness. A fresh, valid reading is drawn at full
  * brightness; a stale one (no update in a while) dims automatically instead of adding an icon;
- * no reading at all shows a dim dashed placeholder.
+ * no reading at all shows a dim dashed placeholder. A small clock sits above the value and the
+ * phone's battery percentage below it, both dim so the glucose reading stays the focal point.
  */
 object MatrixRenderer {
     const val SIZE = 25
 
     private const val FULL_BRIGHTNESS = 255
     private const val DIM_BRIGHTNESS = 70
+    private const val SECONDARY_BRIGHTNESS = 90
     private const val STALE_AFTER_MS = 15 * 60 * 1000L
 
-    fun render(reading: GlucoseReading?, useMmol: Boolean, nowMillis: Long = System.currentTimeMillis()): IntArray {
+    fun render(
+        reading: GlucoseReading?,
+        useMmol: Boolean,
+        nowMillis: Long = System.currentTimeMillis(),
+        batteryPercent: Int? = null
+    ): IntArray {
         val grid = IntArray(SIZE * SIZE)
+
+        drawClock(grid, nowMillis)
+        if (batteryPercent != null) drawBattery(grid, batteryPercent)
 
         if (reading == null) {
             drawPlaceholder(grid)
@@ -42,6 +54,34 @@ object MatrixRenderer {
             drawMgdl(grid, reading.mgdl, reading.trend, brightness)
         }
         return grid
+    }
+
+    private fun drawClock(grid: IntArray, nowMillis: Long) {
+        val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
+        val text = "%02d:%02d".format(time.hour, time.minute)
+        drawTinyText(grid, text, y = 2)
+    }
+
+    private fun drawBattery(grid: IntArray, percent: Int) {
+        drawTinyText(grid, percent.coerceIn(0, 100).toString(), y = 18)
+    }
+
+    /** Centers a string of digits/':' set in the tiny 3x5 font at the given row. */
+    private fun drawTinyText(grid: IntArray, text: String, y: Int) {
+        var totalWidth = 0
+        for (c in text) totalWidth += if (c == ':') PixelFont.TINY_COLON_WIDTH else PixelFont.TINY_DIGIT_WIDTH
+        totalWidth += text.length - 1
+
+        var x = centeredStart(totalWidth, SIZE)
+        for (c in text) {
+            if (c == ':') {
+                drawGlyph(grid, PixelFont.tinyColon, x, y, SECONDARY_BRIGHTNESS)
+                x += PixelFont.TINY_COLON_WIDTH + 1
+            } else {
+                drawGlyph(grid, PixelFont.tinyDigits.getValue(c), x, y, SECONDARY_BRIGHTNESS)
+                x += PixelFont.TINY_DIGIT_WIDTH + 1
+            }
+        }
     }
 
     private fun drawPlaceholder(grid: IntArray, brightness: Int = DIM_BRIGHTNESS) {
@@ -72,15 +112,20 @@ object MatrixRenderer {
     }
 
     private fun drawMmol(grid: IntArray, mmol: Double, trend: Trend, brightness: Int) {
-        val rounded = (mmol * 10).roundToInt() / 10.0
-        val text = String.format("%.1f", rounded) // e.g. "6.7" or "12.3"
+        // Below 10 mmol/L there's room for a decimal place next to the arrow; at/above it,
+        // drop the decimal so "value + arrow" still fits on the same row as mg/dL does.
+        val text = if (mmol < 10.0) {
+            "%.1f".format((mmol * 10).roundToInt() / 10.0)
+        } else {
+            mmol.roundToInt().coerceAtMost(99).toString()
+        }
 
         var totalWidth = 0
         for (c in text) totalWidth += if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH
         totalWidth += text.length - 1 // 1px gap between glyphs
 
-        var x = centeredStart(totalWidth, SIZE)
-        val y = 5
+        val y = (SIZE - PixelFont.GLYPH_HEIGHT) / 2
+        var x = centeredStart(totalWidth, 17)
         for (c in text) {
             if (c == '.') {
                 drawGlyph(grid, PixelFont.dot, x, y, brightness)
@@ -91,8 +136,8 @@ object MatrixRenderer {
             }
         }
 
-        val arrowX = centeredStart(PixelFont.ARROW_WIDTH, SIZE)
-        drawGlyph(grid, PixelFont.arrows.getValue(trend), arrowX, 15, arrowBrightness(brightness))
+        val arrowX = 18
+        drawGlyph(grid, PixelFont.arrows.getValue(trend), arrowX, y, arrowBrightness(brightness))
     }
 
     private fun arrowBrightness(base: Int) = (base * 0.75).roundToInt().coerceIn(0, 255)

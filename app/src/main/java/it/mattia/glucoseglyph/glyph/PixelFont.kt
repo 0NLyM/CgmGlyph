@@ -59,4 +59,25 @@ internal object PixelFont {
         )
     )
     const val ARROW_WIDTH = 7
+
+    /** A tiny 3x5 digit set used for the clock and battery readouts (secondary info, kept small
+     * and dim so the glucose value stays the one thing that grabs your eye). */
+    val tinyDigits: Map<Char, List<String>> = mapOf(
+        '0' to listOf("111", "101", "101", "101", "111"),
+        '1' to listOf("010", "110", "010", "010", "111"),
+        '2' to listOf("111", "001", "111", "100", "111"),
+        '3' to listOf("111", "001", "111", "001", "111"),
+        '4' to listOf("101", "101", "111", "001", "001"),
+        '5' to listOf("111", "100", "111", "001", "111"),
+        '6' to listOf("111", "100", "111", "101", "111"),
+        '7' to listOf("111", "001", "001", "001", "001"),
+        '8' to listOf("111", "101", "111", "101", "111"),
+        '9' to listOf("111", "101", "111", "001", "111")
+    )
+    const val TINY_DIGIT_WIDTH = 3
+    const val TINY_GLYPH_HEIGHT = 5
+
+    /** Two stacked dots, 1px wide. */
+    val tinyColon: List<String> = listOf("0", "1", "0", "1", "0")
+    const val TINY_COLON_WIDTH = 1
 }
