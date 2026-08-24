@@ -12,9 +12,16 @@ import kotlin.math.roundToInt
  *
  * Style notes (deliberately minimal, "Nothing"-esque): the matrix is monochrome hardware, so the
  * only expressive dimension left is brightness. A fresh, valid reading is drawn at full
- * brightness; a stale one (no update in a while) dims automatically instead of adding an icon;
- * no reading at all shows a dim dashed placeholder. A small clock sits above the value and the
- * phone's battery percentage below it, both dim so the glucose reading stays the focal point.
+ * brightness; a stale one (no update in a while) dims automatically instead of adding an icon.
+ * No reading yet, or ControlX2 reporting no CGM connected to the pump (its own "n/a"), both show
+ * in full brightness -- those are states worth noticing, not quietly fading into the background.
+ * On the physical Glyph Matrix only, a small clock sits above the value and the phone's battery
+ * percentage below it, both dim so the glucose reading stays the focal point.
+ *
+ * The 25x25 grid is a bounding box around a circular array of LEDs, not a full square -- rows
+ * near the top/bottom edge have far fewer physical pixels across than the middle rows. The clock
+ * and battery rows are kept as close to the vertical center as the main reading allows, and their
+ * own content is kept narrow, to stay inside that circle instead of getting clipped by it.
  */
 object MatrixRenderer {
     const val SIZE = 25
@@ -28,25 +35,28 @@ object MatrixRenderer {
         reading: GlucoseReading?,
         useMmol: Boolean,
         nowMillis: Long = System.currentTimeMillis(),
-        batteryPercent: Int? = null
+        batteryPercent: Int? = null,
+        includeStatusRows: Boolean = false
     ): IntArray {
         val grid = IntArray(SIZE * SIZE)
 
-        drawClock(grid, nowMillis)
-        if (batteryPercent != null) drawBattery(grid, batteryPercent)
+        if (includeStatusRows) {
+            drawClock(grid, nowMillis)
+            if (batteryPercent != null) drawBattery(grid, batteryPercent)
+        }
 
         if (reading == null) {
-            drawPlaceholder(grid)
+            drawPlaceholder(grid, "---", FULL_BRIGHTNESS)
+            return grid
+        }
+
+        if (!reading.valid) {
+            drawPlaceholder(grid, "n/a", FULL_BRIGHTNESS)
             return grid
         }
 
         val stale = (nowMillis - reading.receivedEpochMillis) > STALE_AFTER_MS
-        val brightness = if (!reading.valid) DIM_BRIGHTNESS else if (stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
-
-        if (!reading.valid) {
-            drawPlaceholder(grid, brightness)
-            return grid
-        }
+        val brightness = if (stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
 
         if (useMmol) {
             drawMmol(grid, reading.mmol(), reading.trend, brightness)
@@ -56,36 +66,46 @@ object MatrixRenderer {
         return grid
     }
 
+    // Rows chosen to sit as close to the matrix's vertical center (row 12) as the main value's
+    // band (rows 9-15) allows -- the closer to center, the more physical LEDs are actually lit
+    // across a row on the real circular hardware.
+    private const val CLOCK_Y = 4
+    private const val BATTERY_Y = 16
+
     private fun drawClock(grid: IntArray, nowMillis: Long) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
         val text = "%02d:%02d".format(time.hour, time.minute)
-        drawTinyText(grid, text, y = 2)
+        drawTinyText(grid, text, y = CLOCK_Y)
     }
 
     private fun drawBattery(grid: IntArray, percent: Int) {
-        drawTinyText(grid, percent.coerceIn(0, 100).toString(), y = 18)
+        drawTinyText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y)
     }
 
-    /** Centers a string of digits/':' set in the tiny 3x5 font at the given row. */
+    /** Centers a string of digits/':'/'%' set in the tiny 3x5 font at the given row. */
     private fun drawTinyText(grid: IntArray, text: String, y: Int) {
-        var totalWidth = 0
-        for (c in text) totalWidth += if (c == ':') PixelFont.TINY_COLON_WIDTH else PixelFont.TINY_DIGIT_WIDTH
-        totalWidth += text.length - 1
+        fun widthOf(c: Char) = when (c) {
+            ':' -> PixelFont.TINY_COLON_WIDTH
+            '%' -> PixelFont.TINY_PERCENT_WIDTH
+            else -> PixelFont.TINY_DIGIT_WIDTH
+        }
 
+        var totalWidth = text.length - 1
+        for (c in text) totalWidth += widthOf(c)
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            if (c == ':') {
-                drawGlyph(grid, PixelFont.tinyColon, x, y, SECONDARY_BRIGHTNESS)
-                x += PixelFont.TINY_COLON_WIDTH + 1
-            } else {
-                drawGlyph(grid, PixelFont.tinyDigits.getValue(c), x, y, SECONDARY_BRIGHTNESS)
-                x += PixelFont.TINY_DIGIT_WIDTH + 1
+            val pattern = when (c) {
+                ':' -> PixelFont.tinyColon
+                '%' -> PixelFont.tinyPercent
+                else -> PixelFont.tinyDigits.getValue(c)
             }
+            drawGlyph(grid, pattern, x, y, SECONDARY_BRIGHTNESS)
+            x += widthOf(c) + 1
         }
     }
 
-    private fun drawPlaceholder(grid: IntArray, brightness: Int = DIM_BRIGHTNESS) {
-        val chars = "---".toList()
+    private fun drawPlaceholder(grid: IntArray, text: String, brightness: Int) {
+        val chars = text.toList()
         val totalWidth = chars.size * PixelFont.DIGIT_WIDTH + (chars.size - 1)
         var x = centeredStart(totalWidth, 17)
         val y = (SIZE - PixelFont.GLYPH_HEIGHT) / 2

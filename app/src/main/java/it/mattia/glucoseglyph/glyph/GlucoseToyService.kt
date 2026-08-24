@@ -56,7 +56,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
         val frame = MatrixRenderer.render(
             reading = GlucoseState.current,
             useMmol = settings.useMmol,
-            batteryPercent = currentBatteryPercent(applicationContext)
+            batteryPercent = currentBatteryPercent(applicationContext),
+            includeStatusRows = true
         )
         try {
             manager.setMatrixFrame(frame)

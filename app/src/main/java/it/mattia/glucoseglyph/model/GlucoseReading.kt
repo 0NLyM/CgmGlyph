@@ -52,6 +52,8 @@ data class GlucoseReading(
     val readingEpochMillis: Long,
     /** Local device time when this app received/parsed the reading. */
     val receivedEpochMillis: Long,
+    /** False when the pump reports mgdl == 0, ControlX2's own convention for "no CGM connected"
+     * (shown there as "n/a"). */
     val valid: Boolean
 ) {
     fun mmol(): Double = mgdl / 18.0182

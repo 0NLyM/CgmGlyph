@@ -113,7 +113,6 @@ class ControlX2Client(
         val params = egv ?: return null
         val cgmReading = params.optInt("cgmReading", -1)
         if (cgmReading < 0) return null
-        val egvStatus = params.optString("egvStatus", "VALID")
         val pumpTimestampSeconds = params.optLong("bgReadingTimestampSeconds", 0L)
         val readingEpochMillis = (pumpTimestampSeconds + PUMP_EPOCH_OFFSET_SECONDS) * 1000L
 
@@ -128,7 +127,9 @@ class ControlX2Client(
                 trend = trend,
                 readingEpochMillis = readingEpochMillis,
                 receivedEpochMillis = System.currentTimeMillis(),
-                valid = egvStatus == "VALID"
+                // ControlX2's own convention (GlucoseHeroCard): mgdl == 0 means no CGM is
+                // connected to the pump, shown there as "n/a".
+                valid = cgmReading > 0
             )
         )
     }

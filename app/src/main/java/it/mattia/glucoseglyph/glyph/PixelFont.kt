@@ -20,7 +20,11 @@ internal object PixelFont {
         '7' to listOf("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
         '8' to listOf("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
         '9' to listOf("01110", "10001", "10001", "01111", "00001", "00010", "01100"),
-        '-' to listOf("00000", "00000", "00000", "11111", "00000", "00000", "00000")
+        '-' to listOf("00000", "00000", "00000", "11111", "00000", "00000", "00000"),
+        // Lowercase, used only to spell "n/a" when ControlX2 reports no CGM connected to the pump.
+        'n' to listOf("00000", "00000", "10110", "11001", "10001", "10001", "10001"),
+        'a' to listOf("00000", "00000", "01110", "00001", "01111", "10001", "01111"),
+        '/' to listOf("00001", "00001", "00010", "00100", "01000", "10000", "10000")
     )
     const val DIGIT_WIDTH = 5
     const val DOT_WIDTH = 1
@@ -80,4 +84,9 @@ internal object PixelFont {
     /** Two stacked dots, 1px wide. */
     val tinyColon: List<String> = listOf("0", "1", "0", "1", "0")
     const val TINY_COLON_WIDTH = 1
+
+    /** A small diagonal stand-in for "%", 3px wide -- a literal percent sign doesn't read at
+     * this size, but a lone slash next to a number is an unambiguous "percent" convention. */
+    val tinyPercent: List<String> = listOf("100", "001", "010", "100", "001")
+    const val TINY_PERCENT_WIDTH = 3
 }

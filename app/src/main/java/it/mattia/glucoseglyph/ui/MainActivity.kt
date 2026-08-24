@@ -54,13 +54,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
-import it.mattia.glucoseglyph.model.currentBatteryPercent
 import it.mattia.glucoseglyph.glyph.MatrixRenderer
 import it.mattia.glucoseglyph.net.ControlX2Client
 import it.mattia.glucoseglyph.service.GlucosePollingService
@@ -356,9 +354,10 @@ private fun MatrixPreview(
     useMmol: Boolean,
     tick: Long
 ) {
-    val context = LocalContext.current
+    // Clock/battery are drawn only on the physical Glyph Matrix (GlucoseToyService); this
+    // preview intentionally mirrors just the glucose reading itself.
     val grid = remember(reading, useMmol, tick) {
-        MatrixRenderer.render(reading, useMmol, batteryPercent = currentBatteryPercent(context))
+        MatrixRenderer.render(reading, useMmol)
     }
     Box(
         modifier = Modifier
