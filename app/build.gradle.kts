@@ -4,6 +4,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// CI passes the GitHub Actions run number so each published build gets a
+// distinct, monotonically increasing versionCode/versionName. Locally this
+// just falls back to 1 / "1.0-dev".
+val ciBuildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "").toIntOrNull()
+
 android {
     namespace = "it.mattia.glucoseglyph"
     compileSdk = 35
@@ -12,8 +17,23 @@ android {
         applicationId = "it.mattia.glucoseglyph"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = ciBuildNumber ?: 1
+        versionName = ciBuildNumber?.let { "1.0.$it" } ?: "1.0-dev"
+    }
+
+    signingConfigs {
+        // A fixed, repo-committed debug keystore (NOT the per-machine one Android
+        // Studio/Gradle auto-generates). Every CI run otherwise gets its own random
+        // debug key, so each downloaded APK has a different signature and Android
+        // refuses to install it over the previous one ("signatures don't match").
+        // This is a debug-only key with the standard well-known debug password; it
+        // must never be used to sign a release build.
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {

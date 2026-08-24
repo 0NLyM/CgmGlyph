@@ -35,17 +35,20 @@ jobs:
 
       - name: Rename APK for release
         if: github.ref == 'refs/heads/main'
-        run: cp app/build/outputs/apk/debug/app-debug.apk glucose-glyph-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk "glucose-glyph-1.0.${{ github.run_number }}.apk"
 
-      - name: Publish/update "latest build" release
+      - name: Publish versioned release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-build
-          name: "Ultima build (debug)"
+          tag_name: v1.0.${{ github.run_number }}
+          name: "v1.0.${{ github.run_number }}"
           body: |
             APK di debug generato automaticamente dal commit ${{ github.sha }}.
             Non firmato per il Play Store: va bene per installazione diretta (sideload).
+            Firmato con la keystore di debug fissa del repo, quindi si installa
+            come aggiornamento sopra le versioni precedenti (stesso versionCode
+            progressivo: ${{ github.run_number }}).
           prerelease: true
           make_latest: true
-          files: glucose-glyph-debug.apk
+          files: glucose-glyph-1.0.${{ github.run_number }}.apk
