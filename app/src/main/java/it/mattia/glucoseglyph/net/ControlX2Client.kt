@@ -58,17 +58,17 @@ class ControlX2Client(
     }
 
     /**
-     * Actively asks the pump for a fresh CGM reading (opCode 34 / CURRENT_STATUS,
-     * response opCode 35 = CurrentEGVGuiDataResponse) and parses it out of the
-     * response array.
+     * Actively asks the pump for a fresh CGM reading and its trend arrow in a single batch:
+     *  - opCode 34 (CurrentEGVGuiDataRequest)  -> CurrentEGVGuiDataResponse: mg/dL + timestamp
+     *  - opCode 56 (HomeScreenMirrorRequest)   -> HomeScreenMirrorResponse: cgmTrendIconId, the
+     *    exact same trend arrow ControlX2's own Dashboard/home screen shows.
+     * Both use the CURRENT_STATUS characteristic.
      */
     fun fetchLatestReading(): FetchResult {
-        val body = JSONArray().put(
-            JSONObject()
-                .put("cargo", "")
-                .put("opCode", 34)
-                .put("characteristic", "CURRENT_STATUS")
-        ).toString().toRequestBody("application/json".toMediaType())
+        val body = JSONArray()
+            .put(JSONObject().put("cargo", "").put("opCode", 34).put("characteristic", "CURRENT_STATUS"))
+            .put(JSONObject().put("cargo", "").put("opCode", 56).put("characteristic", "CURRENT_STATUS"))
+            .toString().toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
             .url(baseUrl + "/api/pump/messages")
@@ -96,32 +96,41 @@ class ControlX2Client(
         } catch (e: Exception) {
             return null
         }
+
+        var egv: JSONObject? = null
+        var homeScreenTrendIconId: Int? = null
         for (i in 0 until array.length()) {
             val message = array.optJSONObject(i) ?: continue
             val name = message.optString("name")
-            if (!name.endsWith("CurrentEGVGuiDataResponse")) continue
-
             val params = message.optJSONObject("params") ?: continue
-            val cgmReading = params.optInt("cgmReading", -1)
-            if (cgmReading < 0) continue
-            val trendRate = params.optInt("trendRate", 0)
-            val egvStatus = params.optString("egvStatus", "VALID")
-            val pumpTimestampSeconds = params.optLong("bgReadingTimestampSeconds", 0L)
-
-            val readingEpochMillis =
-                (pumpTimestampSeconds + PUMP_EPOCH_OFFSET_SECONDS) * 1000L
-
-            return FetchResult.Success(
-                GlucoseReading(
-                    mgdl = cgmReading,
-                    trend = Trend.fromTrendRate(trendRate),
-                    readingEpochMillis = readingEpochMillis,
-                    receivedEpochMillis = System.currentTimeMillis(),
-                    valid = egvStatus == "VALID"
-                )
-            )
+            when {
+                name.endsWith("CurrentEGVGuiDataResponse") -> egv = params
+                name.endsWith("HomeScreenMirrorResponse") ->
+                    homeScreenTrendIconId = params.optInt("cgmTrendIconId", -1).takeIf { it >= 0 }
+            }
         }
-        return null
+
+        val params = egv ?: return null
+        val cgmReading = params.optInt("cgmReading", -1)
+        if (cgmReading < 0) return null
+        val egvStatus = params.optString("egvStatus", "VALID")
+        val pumpTimestampSeconds = params.optLong("bgReadingTimestampSeconds", 0L)
+        val readingEpochMillis = (pumpTimestampSeconds + PUMP_EPOCH_OFFSET_SECONDS) * 1000L
+
+        // Prefer the pump's own trend icon (matches ControlX2's UI exactly); fall back to the
+        // trendRate heuristic only if HomeScreenMirrorResponse wasn't in the batch response.
+        val trend = homeScreenTrendIconId?.let { Trend.fromCgmTrendIconId(it) }
+            ?: Trend.fromTrendRate(params.optInt("trendRate", 0))
+
+        return FetchResult.Success(
+            GlucoseReading(
+                mgdl = cgmReading,
+                trend = trend,
+                readingEpochMillis = readingEpochMillis,
+                receivedEpochMillis = System.currentTimeMillis(),
+                valid = egvStatus == "VALID"
+            )
+        )
     }
 
     private fun emptyReading() = GlucoseReading(
