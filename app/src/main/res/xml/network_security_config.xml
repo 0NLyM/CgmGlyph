@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- ControlX2's HTTP Debug API is plain HTTP (no TLS) and only ever reachable on the
-     device's own loopback interface, so cleartext is allowed for 127.0.0.1/localhost
-     only -- not for the app as a whole. -->
+     device's own loopback interface, so cleartext is scoped to 127.0.0.1/localhost
+     only, not to the app as a whole. -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>
