@@ -8,7 +8,6 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import it.mattia.glucoseglyph.GlucoseGlyphApp
-import it.mattia.glucoseglyph.R
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
 import it.mattia.glucoseglyph.model.Trend
@@ -126,12 +125,15 @@ class GlucosePollingService : Service() {
             this, 0, stopIntent,
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
         )
+        // The small icon *is* the point of this notification: rendering the glucose value and
+        // trend arrow into it puts the reading directly in the status bar, not just in the shade.
+        val icon = StatusBarIconRenderer.render(GlucoseState.current, settings.useMmol)
         return NotificationCompat.Builder(this, GlucoseGlyphApp.NOTIFICATION_CHANNEL_ID)
             .setContentTitle("Glucose Glyph")
             .setContentText(text)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(icon)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .addAction(0, "Ferma", stopPendingIntent)
             .build()
     }

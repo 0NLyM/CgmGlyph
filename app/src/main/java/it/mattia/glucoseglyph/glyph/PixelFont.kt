@@ -3,8 +3,9 @@ package it.mattia.glucoseglyph.glyph
 import it.mattia.glucoseglyph.model.Trend
 
 /**
- * A tiny 5x7 dot-matrix font (digits + dash + decimal point) and a handful of 6x7 trend-arrow
- * glyphs, hand-drawn to read clearly on the Phone (3) Glyph Matrix's 25x25 LEDs.
+ * A 5x5 dot-matrix font (digits, dash, decimal point, colon, percent) and a set of 7x7
+ * trend-arrow glyphs, hand-drawn to read clearly on the Phone (3) Glyph Matrix's 25x25 LEDs.
+ * The clock and battery readouts share this same font/size as the glucose value itself.
  */
 internal object PixelFont {
 
@@ -65,29 +66,15 @@ internal object PixelFont {
     )
     const val ARROW_WIDTH = 7
 
-    /** A tiny 3x5 digit set used for the clock and battery readouts (secondary info, kept small
-     * and dim so the glucose value stays the one thing that grabs your eye). */
-    val tinyDigits: Map<Char, List<String>> = mapOf(
-        '0' to listOf("111", "101", "101", "101", "111"),
-        '1' to listOf("010", "110", "010", "010", "111"),
-        '2' to listOf("111", "001", "111", "100", "111"),
-        '3' to listOf("111", "001", "111", "001", "111"),
-        '4' to listOf("101", "101", "111", "001", "001"),
-        '5' to listOf("111", "100", "111", "001", "111"),
-        '6' to listOf("111", "100", "111", "101", "111"),
-        '7' to listOf("111", "001", "001", "001", "001"),
-        '8' to listOf("111", "101", "111", "101", "111"),
-        '9' to listOf("111", "101", "111", "001", "111")
-    )
-    const val TINY_DIGIT_WIDTH = 3
-    const val TINY_GLYPH_HEIGHT = 5
+    // Clock/battery use these two extra glyphs at the exact same size/weight as the digits
+    // above, so the whole matrix reads as one consistent typeface instead of a bold number
+    // surrounded by a smaller, secondary font.
 
-    /** Two stacked dots, 1px wide. */
-    val tinyColon: List<String> = listOf("0", "1", "0", "1", "0")
-    const val TINY_COLON_WIDTH = 1
+    /** Two stacked dots, 2px wide. */
+    val colon: List<String> = listOf("00", "01", "00", "01", "00")
+    const val COLON_WIDTH = 2
 
-    /** A small diagonal stand-in for "%", 3px wide -- a literal percent sign doesn't read at
-     * this size, but a lone slash next to a number is an unambiguous "percent" convention. */
-    val tinyPercent: List<String> = listOf("100", "001", "010", "100", "001")
-    const val TINY_PERCENT_WIDTH = 3
+    /** A small diagonal stand-in for "%" at digit scale. */
+    val percent: List<String> = listOf("11000", "00010", "00100", "01000", "00011")
+    const val PERCENT_WIDTH = 5
 }

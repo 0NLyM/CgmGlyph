@@ -14,10 +14,14 @@ class GlucoseGlyphApp : Application() {
 
     private fun createNotificationChannel() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // IMPORTANCE_LOW (not MIN): MIN explicitly hides the icon from the status bar on Android,
+        // only showing it in the pulled-down notification list. LOW keeps it silent (no sound,
+        // no heads-up popup) while still showing the status-bar icon, which is the whole point of
+        // rendering the glucose value into it.
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             "Monitoraggio glucosio",
-            NotificationManager.IMPORTANCE_MIN
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Servizio in background che legge il glucosio da ControlX2"
             setShowBadge(false)
@@ -26,6 +30,9 @@ class GlucoseGlyphApp : Application() {
     }
 
     companion object {
-        const val NOTIFICATION_CHANNEL_ID = "glucose_polling"
+        // Bumped from "glucose_polling": a channel's importance is immutable once created, so
+        // installs that already had the old (IMPORTANCE_MIN, status-bar-hidden) channel need a
+        // fresh ID to actually pick up IMPORTANCE_LOW.
+        const val NOTIFICATION_CHANNEL_ID = "glucose_polling_v2"
     }
 }
