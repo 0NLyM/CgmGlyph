@@ -69,9 +69,11 @@ internal object PixelFont {
     // Clock/battery use a dedicated 4x5 font -- a step up from the original 3px-wide version
     // (which read as noticeably thinner/smaller than the glucose value) but narrower than the
     // full 5px digit font above (which clipped badly at these outer rows: the matrix's circular
-    // LED layout leaves far less physical width there than in the middle). Drawn with *no* gap
-    // between characters at all (see drawStatusText) to fit as many as possible into the ~17px
-    // available -- including dropping the "HH:MM" colon and just showing "HHMM".
+    // LED layout leaves far less physical width there than in the middle). Same rounded-rectangle
+    // design language as `digits` above, just one column narrower; drawStatusText now puts a 1px
+    // gap between every character (this font was previously packed with zero gap, which let
+    // adjacent glyphs' strokes touch and bleed into each other -- e.g. two digits' vertical
+    // sides sitting in adjacent columns read as one blob rather than two distinct "0"s).
     val statusDigits: Map<Char, List<String>> = mapOf(
         '0' to listOf("0110", "1001", "1001", "1001", "0110"),
         '1' to listOf("0010", "0110", "0010", "0010", "0111"),
@@ -86,8 +88,9 @@ internal object PixelFont {
     )
     const val STATUS_DIGIT_WIDTH = 4
 
-    /** A plain diagonal stroke for "%" at status-digit scale -- the earlier version had a doubled
-     * pixel at each end that read as two stray dots rather than part of the symbol. */
-    val statusPercent: List<String> = listOf("1000", "0100", "0010", "0001", "0000")
+    /** "%" at status-digit scale: a 1px dot at each corner (each exactly one column wide, unlike
+     * the earlier two-pixel-wide blobs) with a single stray pixel between them standing in for
+     * the diagonal stroke. */
+    val statusPercent: List<String> = listOf("1000", "1000", "0010", "0001", "0001")
     const val STATUS_PERCENT_WIDTH = 4
 }

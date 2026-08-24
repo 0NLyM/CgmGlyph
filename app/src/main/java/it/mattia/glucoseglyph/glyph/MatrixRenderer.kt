@@ -65,8 +65,8 @@ object MatrixRenderer {
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
-        // No ":" separator -- cleaner at this scale, and the pair-of-pair grouping ("1430") still
-        // reads unambiguously as a time.
+        // No ":" separator -- the 1px inter-character gap in drawStatusText now keeps hour and
+        // minute from visually running together instead.
         val text = "%02d%02d".format(time.hour, time.minute)
         drawStatusText(grid, text, y = CLOCK_Y, brightness)
     }
@@ -75,19 +75,21 @@ object MatrixRenderer {
         drawStatusText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y, brightness)
     }
 
-    /** Draws digits/'%' in the status font on the given row, centered, with characters touching
-     * (no gap at all) -- at row 3/17 there's roughly 17px of physical width available. */
+    /** Draws digits/'%' in the status font on the given row, centered, with a 1px gap between
+     * characters (same convention as drawValueAndArrow) -- at row 3/17 there's roughly 17-20px of
+     * physical width available, best-effort/unverified on real hardware. */
     private fun drawStatusText(grid: IntArray, text: String, y: Int, brightness: Int) {
         fun widthOf(c: Char) = if (c == '%') PixelFont.STATUS_PERCENT_WIDTH else PixelFont.STATUS_DIGIT_WIDTH
 
         var totalWidth = 0
         for (c in text) totalWidth += widthOf(c)
+        totalWidth += text.length - 1 // 1px gap between characters
 
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
             val pattern = if (c == '%') PixelFont.statusPercent else PixelFont.statusDigits.getValue(c)
             drawGlyph(grid, pattern, x, y, brightness)
-            x += widthOf(c)
+            x += widthOf(c) + 1
         }
     }
 

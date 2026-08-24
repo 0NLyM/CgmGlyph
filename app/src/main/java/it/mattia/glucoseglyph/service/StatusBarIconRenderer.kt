@@ -15,11 +15,11 @@ import it.mattia.glucoseglyph.model.Trend
  * foreground service notification's small icon so the value itself is what shows up in the
  * status bar -- not a generic app icon that tells you nothing at a glance.
  *
- * Layout: the number sits in the left ~82% of the icon, the trend indicator (a small filled
+ * Layout: the number sits in the left ~86% of the icon, the trend indicator (a small filled
  * triangle, rotated to point in the reading's direction) sits beside it, vertically centered, in
  * the remaining strip on the right -- side by side, not stacked. The number uses a condensed,
- * non-bold system typeface, sized aggressively (see below), so it reads clearly at the tiny size
- * a status bar icon actually renders at.
+ * non-bold system typeface, additionally squeezed narrower still via textScaleX, so it reads
+ * clearly at the tiny size a status bar icon actually renders at.
  */
 object StatusBarIconRenderer {
     private const val CANVAS_SIZE = 96
@@ -32,22 +32,24 @@ object StatusBarIconRenderer {
         val bitmap = Bitmap.createBitmap(CANVAS_SIZE, CANVAS_SIZE, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val triangleZone = if (degrees != null) CANVAS_SIZE * 0.18f else 0f
+        val triangleZone = if (degrees != null) CANVAS_SIZE * 0.14f else 0f
         val numberZoneWidth = CANVAS_SIZE - triangleZone
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             typeface = CONDENSED
             textAlign = Paint.Align.CENTER
+            // The width budget below is fixed (numberZoneWidth), and textSize is picked purely by
+            // shrinking until the text measures within it -- so the only way to make the digits
+            // actually render bigger is to make each glyph narrower per unit of textSize, which
+            // lets a taller size still fit the same width. sans-serif-condensed alone wasn't
+            // narrow enough; scale it down further on top.
+            textScaleX = 0.78f
         }
 
-        // Start well above the canvas size: a given textSize's actual glyph ink is noticeably
-        // shorter than that (normal font metrics reserve headroom above/below), so sizing to
-        // *fill the width* here -- letting tall digits touch or slightly crop the very top/bottom
-        // -- reads as bigger than sizing conservatively to guarantee nothing is ever clipped.
         var textSize = CANVAS_SIZE * 1.35f
         paint.textSize = textSize
-        val maxTextWidth = numberZoneWidth * 0.96f
+        val maxTextWidth = numberZoneWidth * 0.99f
         while (paint.measureText(text) > maxTextWidth && textSize > 16f) {
             textSize -= 2f
             paint.textSize = textSize
