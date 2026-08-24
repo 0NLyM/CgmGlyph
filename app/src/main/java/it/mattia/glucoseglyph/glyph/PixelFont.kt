@@ -8,30 +8,31 @@ import it.mattia.glucoseglyph.model.Trend
  */
 internal object PixelFont {
 
-    // Each glyph is 7 rows of a bit-string; '1' = lit pixel.
+    // Each glyph is 5 rows of a bit-string; '1' = lit pixel. Kept a notch smaller than a full
+    // 5x7 so there's a clear gap between this row and the clock/battery rows above and below it.
     val digits: Map<Char, List<String>> = mapOf(
-        '0' to listOf("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
-        '1' to listOf("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
-        '2' to listOf("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
-        '3' to listOf("11111", "00010", "00100", "00010", "00001", "10001", "01110"),
-        '4' to listOf("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
-        '5' to listOf("11111", "10000", "11110", "00001", "00001", "10001", "01110"),
-        '6' to listOf("00110", "01000", "10000", "11110", "10001", "10001", "01110"),
-        '7' to listOf("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
-        '8' to listOf("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
-        '9' to listOf("01110", "10001", "10001", "01111", "00001", "00010", "01100"),
-        '-' to listOf("00000", "00000", "00000", "11111", "00000", "00000", "00000"),
+        '0' to listOf("01110", "10001", "10001", "10001", "01110"),
+        '1' to listOf("00100", "01100", "00100", "00100", "01110"),
+        '2' to listOf("11110", "00001", "01110", "10000", "11111"),
+        '3' to listOf("11110", "00001", "00110", "00001", "11110"),
+        '4' to listOf("10010", "10010", "11111", "00010", "00010"),
+        '5' to listOf("11111", "10000", "11110", "00001", "11110"),
+        '6' to listOf("01110", "10000", "11110", "10001", "01110"),
+        '7' to listOf("11111", "00010", "00100", "01000", "01000"),
+        '8' to listOf("01110", "10001", "01110", "10001", "01110"),
+        '9' to listOf("01110", "10001", "01111", "00001", "01110"),
+        '-' to listOf("00000", "00000", "11111", "00000", "00000"),
         // Lowercase, used only to spell "n/a" when ControlX2 reports no CGM connected to the pump.
-        'n' to listOf("00000", "00000", "10110", "11001", "10001", "10001", "10001"),
-        'a' to listOf("00000", "00000", "01110", "00001", "01111", "10001", "01111"),
-        '/' to listOf("00001", "00001", "00010", "00100", "01000", "10000", "10000")
+        'n' to listOf("00000", "11110", "10001", "10001", "10001"),
+        'a' to listOf("00000", "01110", "00001", "01111", "10001"),
+        '/' to listOf("00001", "00010", "00100", "01000", "10000")
     )
     const val DIGIT_WIDTH = 5
     const val DOT_WIDTH = 1
-    const val GLYPH_HEIGHT = 7
+    const val GLYPH_HEIGHT = 5
 
     /** A single lit pixel on the baseline, used as a decimal point. */
-    val dot: List<String> = listOf("0", "0", "0", "0", "0", "0", "1")
+    val dot: List<String> = listOf("0", "0", "0", "0", "1")
 
     // 7x7 chevron-tip-plus-shaft arrows, each direction hand-checked for a continuous,
     // unambiguous shape (the earlier 6px diagonals had disconnected pixels that read as a
