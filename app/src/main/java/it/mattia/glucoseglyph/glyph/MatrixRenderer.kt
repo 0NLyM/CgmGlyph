@@ -65,7 +65,9 @@ object MatrixRenderer {
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
-        val text = "%02d:%02d".format(time.hour, time.minute)
+        // No ":" separator -- cleaner at this scale, and the pair-of-pair grouping ("1430") still
+        // reads unambiguously as a time.
+        val text = "%02d%02d".format(time.hour, time.minute)
         drawStatusText(grid, text, y = CLOCK_Y, brightness)
     }
 
@@ -73,26 +75,17 @@ object MatrixRenderer {
         drawStatusText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y, brightness)
     }
 
-    /** Draws digits/':'/'%' in the status font on the given row, centered, with characters
-     * touching (no gap at all) -- at row 3/17 there's roughly 17px of physical width available,
-     * and "HH:MM" at this font's width already uses almost all of it. */
+    /** Draws digits/'%' in the status font on the given row, centered, with characters touching
+     * (no gap at all) -- at row 3/17 there's roughly 17px of physical width available. */
     private fun drawStatusText(grid: IntArray, text: String, y: Int, brightness: Int) {
-        fun widthOf(c: Char) = when (c) {
-            ':' -> PixelFont.STATUS_COLON_WIDTH
-            '%' -> PixelFont.STATUS_PERCENT_WIDTH
-            else -> PixelFont.STATUS_DIGIT_WIDTH
-        }
+        fun widthOf(c: Char) = if (c == '%') PixelFont.STATUS_PERCENT_WIDTH else PixelFont.STATUS_DIGIT_WIDTH
 
         var totalWidth = 0
         for (c in text) totalWidth += widthOf(c)
 
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            val pattern = when (c) {
-                ':' -> PixelFont.statusColon
-                '%' -> PixelFont.statusPercent
-                else -> PixelFont.statusDigits.getValue(c)
-            }
+            val pattern = if (c == '%') PixelFont.statusPercent else PixelFont.statusDigits.getValue(c)
             drawGlyph(grid, pattern, x, y, brightness)
             x += widthOf(c)
         }

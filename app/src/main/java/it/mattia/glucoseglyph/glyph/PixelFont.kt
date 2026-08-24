@@ -70,7 +70,8 @@ internal object PixelFont {
     // (which read as noticeably thinner/smaller than the glucose value) but narrower than the
     // full 5px digit font above (which clipped badly at these outer rows: the matrix's circular
     // LED layout leaves far less physical width there than in the middle). Drawn with *no* gap
-    // between characters at all (see drawStatusText) to fit "HH:MM" into the ~17px available.
+    // between characters at all (see drawStatusText) to fit as many as possible into the ~17px
+    // available -- including dropping the "HH:MM" colon and just showing "HHMM".
     val statusDigits: Map<Char, List<String>> = mapOf(
         '0' to listOf("0110", "1001", "1001", "1001", "0110"),
         '1' to listOf("0010", "0110", "0010", "0010", "0111"),
@@ -85,11 +86,8 @@ internal object PixelFont {
     )
     const val STATUS_DIGIT_WIDTH = 4
 
-    /** Two stacked dots, 1px wide. */
-    val statusColon: List<String> = listOf("0", "1", "0", "1", "0")
-    const val STATUS_COLON_WIDTH = 1
-
-    /** A small diagonal stand-in for "%" at status-digit scale. */
-    val statusPercent: List<String> = listOf("1100", "0001", "0010", "0100", "0011")
+    /** A plain diagonal stroke for "%" at status-digit scale -- the earlier version had a doubled
+     * pixel at each end that read as two stray dots rather than part of the symbol. */
+    val statusPercent: List<String> = listOf("1000", "0100", "0010", "0001", "0000")
     const val STATUS_PERCENT_WIDTH = 4
 }

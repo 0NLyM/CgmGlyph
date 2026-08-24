@@ -14,10 +14,22 @@ class GlucoseGlyphApp : Application() {
 
     private fun createNotificationChannel() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        // IMPORTANCE_HIGH: the highest sort position a notification can get, which is what was
-        // asked for after DEFAULT still wasn't landing at the top. HIGH normally also means a
-        // heads-up popup + sound on every post, but this channel's sound/vibration are explicitly
-        // disabled below and the notification uses setOnlyAlertOnce(true), so updates stay quiet.
+
+        // A channel's importance is immutable once created, so each past importance change here
+        // needed a new channel ID -- but Android never removes old channels on its own, so every
+        // one of those IDs was still piling up as its own separate "category" in system Settings.
+        // Delete anything left over from an earlier ID scheme; only NOTIFICATION_CHANNEL_ID
+        // should ever show up there, however many more times the importance changes later.
+        for (existing in manager.notificationChannels) {
+            if (existing.id.startsWith(CHANNEL_ID_PREFIX) && existing.id != NOTIFICATION_CHANNEL_ID) {
+                manager.deleteNotificationChannel(existing.id)
+            }
+        }
+
+        // IMPORTANCE_HIGH: the highest sort position a notification can get. HIGH normally also
+        // means a heads-up popup + sound on every post, but this channel's sound/vibration are
+        // explicitly disabled below and the notification uses setOnlyAlertOnce(true), so updates
+        // stay quiet.
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             "Monitoraggio glucosio",
@@ -32,9 +44,7 @@ class GlucoseGlyphApp : Application() {
     }
 
     companion object {
-        // Bumped from "glucose_polling_v3": a channel's importance is immutable once created, so
-        // installs that already had the old (IMPORTANCE_DEFAULT) channel need a fresh ID to
-        // actually pick up IMPORTANCE_HIGH's higher sort position.
-        const val NOTIFICATION_CHANNEL_ID = "glucose_polling_v4"
+        private const val CHANNEL_ID_PREFIX = "glucose_polling"
+        const val NOTIFICATION_CHANNEL_ID = "${CHANNEL_ID_PREFIX}_v4"
     }
 }
