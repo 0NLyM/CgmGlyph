@@ -133,7 +133,7 @@ class GlucosePollingService : Service() {
             .setContentText(text)
             .setSmallIcon(icon)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             // Without this, re-posting the notification on every poll (new icon, same ID) can
             // re-alert as if it were a new notification; this keeps updates silent regardless.
             .setOnlyAlertOnce(true)

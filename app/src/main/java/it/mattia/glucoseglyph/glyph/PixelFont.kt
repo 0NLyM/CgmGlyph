@@ -66,29 +66,30 @@ internal object PixelFont {
     )
     const val ARROW_WIDTH = 7
 
-    // Clock/battery use a dedicated, narrower 3x5 font. The full digit-width version (5px) was
-    // tried and clipped badly at the outer rows the matrix's circular LED layout leaves it --
-    // there just isn't 24px of physical width available that close to the edge. This one is
-    // sized to the ~17-18px that IS available there.
+    // Clock/battery use a dedicated 4x5 font -- a step up from the original 3px-wide version
+    // (which read as noticeably thinner/smaller than the glucose value) but narrower than the
+    // full 5px digit font above (which clipped badly at these outer rows: the matrix's circular
+    // LED layout leaves far less physical width there than in the middle). Drawn with *no* gap
+    // between characters at all (see drawStatusText) to fit "HH:MM" into the ~17px available.
     val statusDigits: Map<Char, List<String>> = mapOf(
-        '0' to listOf("111", "101", "101", "101", "111"),
-        '1' to listOf("010", "110", "010", "010", "111"),
-        '2' to listOf("111", "001", "111", "100", "111"),
-        '3' to listOf("111", "001", "111", "001", "111"),
-        '4' to listOf("101", "101", "111", "001", "001"),
-        '5' to listOf("111", "100", "111", "001", "111"),
-        '6' to listOf("111", "100", "111", "101", "111"),
-        '7' to listOf("111", "001", "001", "001", "001"),
-        '8' to listOf("111", "101", "111", "101", "111"),
-        '9' to listOf("111", "101", "111", "001", "111")
+        '0' to listOf("0110", "1001", "1001", "1001", "0110"),
+        '1' to listOf("0010", "0110", "0010", "0010", "0111"),
+        '2' to listOf("1110", "0001", "0110", "1000", "1111"),
+        '3' to listOf("1110", "0001", "0110", "0001", "1110"),
+        '4' to listOf("1001", "1001", "1111", "0001", "0001"),
+        '5' to listOf("1111", "1000", "1110", "0001", "1110"),
+        '6' to listOf("0110", "1000", "1110", "1001", "0110"),
+        '7' to listOf("1111", "0001", "0010", "0100", "0100"),
+        '8' to listOf("0110", "1001", "0110", "1001", "0110"),
+        '9' to listOf("0110", "1001", "0111", "0001", "0110")
     )
-    const val STATUS_DIGIT_WIDTH = 3
+    const val STATUS_DIGIT_WIDTH = 4
 
     /** Two stacked dots, 1px wide. */
     val statusColon: List<String> = listOf("0", "1", "0", "1", "0")
     const val STATUS_COLON_WIDTH = 1
 
     /** A small diagonal stand-in for "%" at status-digit scale. */
-    val statusPercent: List<String> = listOf("100", "001", "010", "100", "001")
-    const val STATUS_PERCENT_WIDTH = 3
+    val statusPercent: List<String> = listOf("1100", "0001", "0010", "0100", "0011")
+    const val STATUS_PERCENT_WIDTH = 4
 }

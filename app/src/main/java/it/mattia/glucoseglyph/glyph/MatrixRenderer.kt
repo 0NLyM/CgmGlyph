@@ -54,13 +54,14 @@ object MatrixRenderer {
         return grid
     }
 
-    // Rows kept close to the matrix's vertical center (row 12) so the narrowest, outermost part
-    // of the circular LED layout isn't in play -- this is the configuration that measured clean
-    // (no clipping) with the narrower status font.
-    private const val CLOCK_Y = 4
+    // One row further out than the previously-clean row 4/16 -- with the wider 4px status font,
+    // this is a best-effort estimate of what the matrix's circular LED mask still allows without
+    // clipping (untested on real hardware; report back if it still clips and it can be dialed in
+    // precisely).
+    private const val CLOCK_Y = 3
     private const val VALUE_Y = 10
     private const val ARROW_Y = 9
-    private const val BATTERY_Y = 16
+    private const val BATTERY_Y = 17
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
@@ -72,8 +73,9 @@ object MatrixRenderer {
         drawStatusText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y, brightness)
     }
 
-    /** Centers a string of digits/':'/'%' in the narrow status font on the given row. No gap is
-     * left around the colon (unlike the 1px gap elsewhere) to keep "HH:MM" as narrow as possible. */
+    /** Draws digits/':'/'%' in the status font on the given row, centered, with characters
+     * touching (no gap at all) -- at row 3/17 there's roughly 17px of physical width available,
+     * and "HH:MM" at this font's width already uses almost all of it. */
     private fun drawStatusText(grid: IntArray, text: String, y: Int, brightness: Int) {
         fun widthOf(c: Char) = when (c) {
             ':' -> PixelFont.STATUS_COLON_WIDTH
@@ -83,10 +85,9 @@ object MatrixRenderer {
 
         var totalWidth = 0
         for (c in text) totalWidth += widthOf(c)
-        for (i in 1 until text.length) if (text[i] != ':' && text[i - 1] != ':') totalWidth++
 
         var x = centeredStart(totalWidth, SIZE)
-        for ((i, c) in text.withIndex()) {
+        for (c in text) {
             val pattern = when (c) {
                 ':' -> PixelFont.statusColon
                 '%' -> PixelFont.statusPercent
@@ -94,8 +95,6 @@ object MatrixRenderer {
             }
             drawGlyph(grid, pattern, x, y, brightness)
             x += widthOf(c)
-            val nextIsColon = i + 1 < text.length && text[i + 1] == ':'
-            if (c != ':' && !nextIsColon) x += 1
         }
     }
 

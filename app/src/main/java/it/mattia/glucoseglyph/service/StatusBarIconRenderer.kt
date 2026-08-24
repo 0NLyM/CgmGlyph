@@ -15,37 +15,45 @@ import it.mattia.glucoseglyph.model.Trend
  * foreground service notification's small icon so the value itself is what shows up in the
  * status bar -- not a generic app icon that tells you nothing at a glance.
  *
- * The number gets almost the whole icon (a status bar icon is tiny to begin with, so cramming a
- * unicode arrow character next to the digits left the digits too small to read); the trend is a
- * small filled triangle in the corner instead, rotated to point in the reading's direction.
+ * Layout: the number sits in the left ~78% of the icon, the trend indicator (a small filled
+ * triangle, rotated to point in the reading's direction) sits beside it, vertically centered, in
+ * the remaining strip on the right -- side by side, not stacked. The number uses a condensed,
+ * non-bold system typeface so it can run bigger within its narrower share of the icon than a
+ * default bold face would allow at the same width.
  */
 object StatusBarIconRenderer {
     private const val CANVAS_SIZE = 96
+    private val CONDENSED = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
 
     fun render(reading: GlucoseReading?, useMmol: Boolean): IconCompat {
         val text = valueText(reading, useMmol)
+        val degrees = arrowRotationDegrees(reading)
 
         val bitmap = Bitmap.createBitmap(CANVAS_SIZE, CANVAS_SIZE, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
+        val triangleZone = if (degrees != null) CANVAS_SIZE * 0.24f else 0f
+        val numberZoneWidth = CANVAS_SIZE - triangleZone
+
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = CONDENSED
             textAlign = Paint.Align.CENTER
         }
 
         var textSize = CANVAS_SIZE * 0.98f
         paint.textSize = textSize
-        val maxWidth = CANVAS_SIZE * 0.98f
-        while (paint.measureText(text) > maxWidth && textSize > 16f) {
+        val maxTextWidth = numberZoneWidth * 0.94f
+        while (paint.measureText(text) > maxTextWidth && textSize > 16f) {
             textSize -= 2f
             paint.textSize = textSize
         }
 
+        val numberCenterX = numberZoneWidth / 2f
         val y = CANVAS_SIZE / 2f - (paint.descent() + paint.ascent()) / 2f
-        canvas.drawText(text, CANVAS_SIZE / 2f, y, paint)
+        canvas.drawText(text, numberCenterX, y, paint)
 
-        arrowRotationDegrees(reading)?.let { degrees -> drawTrendTriangle(canvas, degrees) }
+        if (degrees != null) drawTrendTriangle(canvas, numberZoneWidth, triangleZone, degrees)
 
         return IconCompat.createWithBitmap(bitmap)
     }
@@ -70,11 +78,12 @@ object StatusBarIconRenderer {
         }
     }
 
-    /** A small filled triangle in the top-right corner, rotated to point in the trend direction. */
-    private fun drawTrendTriangle(canvas: Canvas, degrees: Float) {
-        val size = CANVAS_SIZE * 0.26f
-        val cx = CANVAS_SIZE - size * 0.7f
-        val cy = size * 0.7f
+    /** A small filled triangle centered in the right-hand strip, rotated to point in the trend
+     * direction; vertically centered on the icon so it sits beside the number, not above it. */
+    private fun drawTrendTriangle(canvas: Canvas, zoneStartX: Float, zoneWidth: Float, degrees: Float) {
+        val size = minOf(zoneWidth, CANVAS_SIZE.toFloat()) * 0.8f
+        val cx = zoneStartX + zoneWidth / 2f
+        val cy = CANVAS_SIZE / 2f
 
         val path = Path().apply {
             moveTo(cx, cy - size / 2f)
