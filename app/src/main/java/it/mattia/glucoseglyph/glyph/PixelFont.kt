@@ -29,31 +29,34 @@ internal object PixelFont {
     /** A single lit pixel on the baseline, used as a decimal point. */
     val dot: List<String> = listOf("0", "0", "0", "0", "0", "0", "1")
 
+    // 7x7 chevron-tip-plus-shaft arrows, each direction hand-checked for a continuous,
+    // unambiguous shape (the earlier 6px diagonals had disconnected pixels that read as a
+    // stray right triangle on the real hardware instead of an arrow).
     val arrows: Map<Trend, List<String>> = mapOf(
         Trend.DOUBLE_UP to listOf(
-            "001100", "011110", "110011", "001100", "011110", "110011", "000000"
+            "0001000", "0011100", "0101010", "0000000", "0001000", "0011100", "0101010"
         ),
         Trend.SINGLE_UP to listOf(
-            "001100", "011110", "110011", "000110", "000110", "000110", "000110"
+            "0001000", "0011100", "0101010", "0001000", "0001000", "0001000", "0001000"
         ),
         Trend.FORTY_FIVE_UP to listOf(
-            "000111", "000011", "000101", "001000", "010000", "100000", "000000"
+            "0000111", "0000011", "0000100", "0001000", "0010000", "0100000", "1000000"
         ),
         Trend.FLAT to listOf(
-            "000000", "000010", "000011", "111111", "000011", "000010", "000000"
+            "0000000", "0000100", "0000010", "1111111", "0000010", "0000100", "0000000"
         ),
         Trend.FORTY_FIVE_DOWN to listOf(
-            "000000", "100000", "010000", "001000", "000101", "000011", "000111"
+            "1000000", "0100000", "0010000", "0001000", "0000100", "0000011", "0000111"
         ),
         Trend.SINGLE_DOWN to listOf(
-            "000110", "000110", "000110", "000110", "110011", "011110", "001100"
+            "0001000", "0001000", "0001000", "0001000", "0101010", "0011100", "0001000"
         ),
         Trend.DOUBLE_DOWN to listOf(
-            "000000", "110011", "011110", "001100", "110011", "011110", "001100"
+            "0101010", "0011100", "0001000", "0000000", "0101010", "0011100", "0001000"
         ),
         Trend.UNKNOWN to listOf(
-            "000000", "000000", "000000", "111111", "000000", "000000", "000000"
+            "0000000", "0000000", "0000000", "0111110", "0000000", "0000000", "0000000"
         )
     )
-    const val ARROW_WIDTH = 6
+    const val ARROW_WIDTH = 7
 }

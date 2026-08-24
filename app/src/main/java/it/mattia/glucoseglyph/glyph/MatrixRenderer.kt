@@ -65,7 +65,9 @@ object MatrixRenderer {
             x += PixelFont.DIGIT_WIDTH + 1
         }
 
-        val arrowX = 19
+        // 3 digits (worst case) take columns 0-16; a 7px arrow at column 18 lands on 18-24,
+        // using the full 25px width with no clipping.
+        val arrowX = 18
         drawGlyph(grid, PixelFont.arrows.getValue(trend), arrowX, y, arrowBrightness(brightness))
     }
 

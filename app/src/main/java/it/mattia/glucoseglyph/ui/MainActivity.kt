@@ -15,14 +15,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -139,43 +143,55 @@ private fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.systemBars)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 28.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = "GLUCOSE",
-            style = MaterialTheme.typography.headlineMedium,
-            color = NothingWhite
-        )
-        Row {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = "GLUCOSE ",
+                style = MaterialTheme.typography.titleLarge,
+                color = NothingWhite
+            )
             Text(
                 text = "GLYPH",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = NothingRed
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(10.dp))
 
-        MatrixPreview(reading = GlucoseState.current, useMmol = useMmol, tick = tick)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MatrixPreview(reading = GlucoseState.current, useMmol = useMmol, tick = tick)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                UnitChip("mg/dL", selected = !useMmol) { useMmol = false; settings.useMmol = false }
+                Spacer(Modifier.height(6.dp))
+                UnitChip("mmol/L", selected = useMmol) { useMmol = true; settings.useMmol = true }
+                Spacer(Modifier.height(10.dp))
+                StatusLine(tick = tick)
+            }
+        }
 
-        Spacer(Modifier.height(8.dp))
-        StatusLine(tick = tick)
-
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(14.dp))
         SectionLabel("CONTROLX2")
         SettingsCard {
-            LabeledField("Host", host) { host = it; settings.host = it }
-            LabeledField("Porta", port, KeyboardType.Number) {
-                port = it
-                it.toIntOrNull()?.let { p -> settings.port = p }
+            Row {
+                LabeledField("Host", host, modifier = Modifier.weight(2f)) { host = it; settings.host = it }
+                Spacer(Modifier.width(8.dp))
+                LabeledField("Porta", port, KeyboardType.Number, modifier = Modifier.weight(1f)) {
+                    port = it
+                    it.toIntOrNull()?.let { p -> settings.port = p }
+                }
             }
             LabeledField("Utente", username) { username = it; settings.username = it }
             LabeledField("Password", password, isPassword = true) {
                 password = it; settings.password = it
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(
                     onClick = {
@@ -194,59 +210,35 @@ private fun SettingsScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = NothingRed),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     enabled = !testing
                 ) {
                     Text(if (testing) "..." else "Testa connessione")
                 }
                 testResult?.let {
-                    Spacer(Modifier.width(12.dp))
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = NothingGrey)
+                    Spacer(Modifier.width(10.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = NothingGrey)
                 }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-        SectionLabel("VISUALIZZAZIONE")
+        Spacer(Modifier.height(10.dp))
         SettingsCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Unità", style = MaterialTheme.typography.bodyLarge, color = NothingWhite)
-                Row {
-                    UnitChip("mg/dL", selected = !useMmol) {
-                        useMmol = false; settings.useMmol = false
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    UnitChip("mmol/L", selected = useMmol) {
-                        useMmol = true; settings.useMmol = true
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
             LabeledField("Intervallo di aggiornamento (secondi)", pollInterval, KeyboardType.Number) {
                 pollInterval = it
                 it.toIntOrNull()?.let { s -> settings.pollIntervalSeconds = s.coerceIn(15, 900) }
             }
-        }
-
-        Spacer(Modifier.height(20.dp))
-        SectionLabel("SERVIZIO")
-        SettingsCard {
+            Spacer(Modifier.height(2.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Lettura in background", style = MaterialTheme.typography.bodyLarge, color = NothingWhite)
-                    Text(
-                        "Interroga ControlX2 e aggiorna il Glyph Matrix",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NothingGrey
-                    )
-                }
+                Text(
+                    "Lettura in background",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NothingWhite
+                )
                 Switch(
                     checked = serviceOn,
                     onCheckedChange = {
@@ -258,11 +250,10 @@ private fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(10.dp))
         Text(
-            "Apri ControlX2 → Impostazioni → Debug → HTTP API per abilitare l'API " +
-                "locale (stesse credenziali qui sopra). Poi apri il pannello Glyph Toys " +
-                "sul retro del telefono e scegli \"Glucose\".",
+            "ControlX2 → Impostazioni → Debug → HTTP API (stesse credenziali). " +
+                "Poi Glyph Toys sul retro → \"Glucose\".",
             style = MaterialTheme.typography.labelSmall,
             color = NothingGrey
         )
@@ -273,9 +264,9 @@ private fun SettingsScreen(
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelLarge,
         color = NothingGrey,
-        modifier = Modifier.padding(bottom = 8.dp)
+        modifier = Modifier.padding(bottom = 4.dp)
     )
 }
 
@@ -286,7 +277,7 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
         shape = RoundedCornerShape(4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), content = content)
+        Column(modifier = Modifier.padding(12.dp), content = content)
     }
 }
 
@@ -296,13 +287,15 @@ private fun LabeledField(
     value: String,
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false,
+    modifier: Modifier = Modifier,
     onChange: (String) -> Unit
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, color = NothingGrey) },
+        label = { Text(label, color = NothingGrey, style = MaterialTheme.typography.bodySmall) },
         singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium,
         visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
@@ -312,9 +305,9 @@ private fun LabeledField(
             unfocusedBorderColor = NothingGrey,
             cursorColor = NothingRed
         ),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = 3.dp)
     )
 }
 
@@ -346,7 +339,7 @@ private fun StatusLine(tick: Long) {
             "${reading.mgdl} mg/dL · aggiornato ${formatAge(ageSec)} fa"
         }
     }
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = NothingGrey)
+    Text(text, style = MaterialTheme.typography.bodySmall, color = NothingGrey)
 }
 
 private fun formatAge(seconds: Long): String = when {
@@ -366,10 +359,9 @@ private fun MatrixPreview(
     }
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
+            .size(112.dp)
             .background(Color.Black, RoundedCornerShape(8.dp))
-            .padding(10.dp)
+            .padding(8.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val gridSize = MatrixRenderer.SIZE

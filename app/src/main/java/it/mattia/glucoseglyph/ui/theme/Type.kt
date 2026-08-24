@@ -17,10 +17,22 @@ val NothingTypography = Typography(
         fontSize = 28.sp,
         letterSpacing = 1.sp
     ),
+    titleLarge = TextStyle(
+        fontFamily = mono,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        letterSpacing = 1.sp
+    ),
     titleMedium = TextStyle(
         fontFamily = mono,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
+        letterSpacing = 2.sp
+    ),
+    labelLarge = TextStyle(
+        fontFamily = mono,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
         letterSpacing = 2.sp
     ),
     bodyLarge = TextStyle(
@@ -30,6 +42,10 @@ val NothingTypography = Typography(
     bodyMedium = TextStyle(
         fontFamily = mono,
         fontSize = 14.sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = mono,
+        fontSize = 12.sp
     ),
     labelSmall = TextStyle(
         fontFamily = mono,
