@@ -66,15 +66,29 @@ internal object PixelFont {
     )
     const val ARROW_WIDTH = 7
 
-    // Clock/battery use these two extra glyphs at the exact same size/weight as the digits
-    // above, so the whole matrix reads as one consistent typeface instead of a bold number
-    // surrounded by a smaller, secondary font.
+    // Clock/battery use a dedicated, narrower 3x5 font. The full digit-width version (5px) was
+    // tried and clipped badly at the outer rows the matrix's circular LED layout leaves it --
+    // there just isn't 24px of physical width available that close to the edge. This one is
+    // sized to the ~17-18px that IS available there.
+    val statusDigits: Map<Char, List<String>> = mapOf(
+        '0' to listOf("111", "101", "101", "101", "111"),
+        '1' to listOf("010", "110", "010", "010", "111"),
+        '2' to listOf("111", "001", "111", "100", "111"),
+        '3' to listOf("111", "001", "111", "001", "111"),
+        '4' to listOf("101", "101", "111", "001", "001"),
+        '5' to listOf("111", "100", "111", "001", "111"),
+        '6' to listOf("111", "100", "111", "101", "111"),
+        '7' to listOf("111", "001", "001", "001", "001"),
+        '8' to listOf("111", "101", "111", "101", "111"),
+        '9' to listOf("111", "101", "111", "001", "111")
+    )
+    const val STATUS_DIGIT_WIDTH = 3
 
-    /** Two stacked dots, 2px wide. */
-    val colon: List<String> = listOf("00", "01", "00", "01", "00")
-    const val COLON_WIDTH = 2
+    /** Two stacked dots, 1px wide. */
+    val statusColon: List<String> = listOf("0", "1", "0", "1", "0")
+    const val STATUS_COLON_WIDTH = 1
 
-    /** A small diagonal stand-in for "%" at digit scale. */
-    val percent: List<String> = listOf("11000", "00010", "00100", "01000", "00011")
-    const val PERCENT_WIDTH = 5
+    /** A small diagonal stand-in for "%" at status-digit scale. */
+    val statusPercent: List<String> = listOf("100", "001", "010", "100", "001")
+    const val STATUS_PERCENT_WIDTH = 3
 }

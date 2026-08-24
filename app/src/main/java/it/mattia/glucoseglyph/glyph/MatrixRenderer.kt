@@ -16,13 +16,10 @@ import kotlin.math.roundToInt
  * No reading yet, or ControlX2 reporting no CGM connected to the pump (its own "n/a"), both show
  * in full brightness -- those are states worth noticing, not quietly fading into the background.
  * On the physical Glyph Matrix only, a small clock sits above the value and the phone's battery
- * percentage below it, using the exact same font/weight and brightness as the value itself so all
- * three read as one consistent readout rather than a dim decoration around a bright number.
- *
- * The 25x25 grid is a bounding box around a circular array of LEDs, not a full square -- rows
- * near the top/bottom edge have far fewer physical pixels across than the middle rows, so the
- * clock/battery text is drawn as tight as legibility allows to limit how much that round mask
- * clips off the sides.
+ * percentage below it, at the same brightness as the value (so nothing looks like a washed-out
+ * decoration) but in a narrower dedicated font -- the value's own 5px-wide digits were tried for
+ * these two rows and clipped badly, since the matrix's circular LED layout leaves far less
+ * physical width near the edges than in the middle.
  */
 object MatrixRenderer {
     const val SIZE = 25
@@ -57,16 +54,13 @@ object MatrixRenderer {
         return grid
     }
 
-    // Clock/battery sit back at the original outer rows, matching the glucose value's own font
-    // size/weight now that both use the same glyph set; that also opens up rows 7-9 and 15-17 as
-    // clear space around the value instead of the 1px gap the previous, closer-in layout had.
-    // These rows are the narrowest part of the matrix's circular LED layout, so the text below is
-    // kept as tight as legibility allows (no gap around the colon) to minimise how much of it the
-    // hardware's round mask can clip.
-    private const val CLOCK_Y = 2
+    // Rows kept close to the matrix's vertical center (row 12) so the narrowest, outermost part
+    // of the circular LED layout isn't in play -- this is the configuration that measured clean
+    // (no clipping) with the narrower status font.
+    private const val CLOCK_Y = 4
     private const val VALUE_Y = 10
     private const val ARROW_Y = 9
-    private const val BATTERY_Y = 18
+    private const val BATTERY_Y = 16
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
@@ -78,13 +72,13 @@ object MatrixRenderer {
         drawStatusText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y, brightness)
     }
 
-    /** Centers a string of digits/':'/'%' at digit scale on the given row. No gap is left around
-     * the colon (unlike the 1px gap elsewhere) to keep "HH:MM" as narrow as this font allows. */
+    /** Centers a string of digits/':'/'%' in the narrow status font on the given row. No gap is
+     * left around the colon (unlike the 1px gap elsewhere) to keep "HH:MM" as narrow as possible. */
     private fun drawStatusText(grid: IntArray, text: String, y: Int, brightness: Int) {
         fun widthOf(c: Char) = when (c) {
-            ':' -> PixelFont.COLON_WIDTH
-            '%' -> PixelFont.PERCENT_WIDTH
-            else -> PixelFont.DIGIT_WIDTH
+            ':' -> PixelFont.STATUS_COLON_WIDTH
+            '%' -> PixelFont.STATUS_PERCENT_WIDTH
+            else -> PixelFont.STATUS_DIGIT_WIDTH
         }
 
         var totalWidth = 0
@@ -94,9 +88,9 @@ object MatrixRenderer {
         var x = centeredStart(totalWidth, SIZE)
         for ((i, c) in text.withIndex()) {
             val pattern = when (c) {
-                ':' -> PixelFont.colon
-                '%' -> PixelFont.percent
-                else -> PixelFont.digits.getValue(c)
+                ':' -> PixelFont.statusColon
+                '%' -> PixelFont.statusPercent
+                else -> PixelFont.statusDigits.getValue(c)
             }
             drawGlyph(grid, pattern, x, y, brightness)
             x += widthOf(c)
