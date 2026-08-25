@@ -72,19 +72,20 @@ object MatrixRenderer {
     // pinning it to the same top row keeps it looking aligned with the digits next to it.
     private const val ARROW_Y = VALUE_Y + 1
 
-    // Pulled in from the true edge (radius ~12.5, which is what rows 0/1 in the cap would need)
-    // to 10.0: at radius 12.5 the cap's widest row was computing ~21 columns of ring, far more
-    // than that row can really have given the matrix's circular LED layout, which is what was
-    // getting clipped on real hardware. At 10.0 the ring naturally can't reach rows 0-1 at all
-    // (they're geometrically outside a radius-10 circle centered on the matrix), which keeps every
-    // row it does use to a narrower, hopefully-safer column range -- still an estimate, unverified.
-    private const val RING_OUTER_RADIUS = 10.0
-    private const val RING_INNER_RADIUS = 9.0
+    // Back to the original radius -- shrinking it last round didn't fix the clipping (the ring
+    // still cut off left/right) and made it noticeably smaller, so the clipping wasn't a radius
+    // problem. It was excluding the clock/value's whole row band: that made each cap end abruptly
+    // right where it was widest (row 5/19, next to the excluded band), which reads as a hard cut
+    // on both sides rather than a smooth curve. Dropping that exclusion and letting the ring draw
+    // as a full, uninterrupted circle again -- it's drawn before the clock/value, so they still
+    // naturally sit on top of it wherever the two would overlap, which is the normal/expected look
+    // for a ring behind content, not a bug to route around.
+    private const val RING_OUTER_RADIUS = 12.5
+    private const val RING_INNER_RADIUS = 11.5
     // A second, dimmer ring just inside the main one, for a soft glow/halo look.
     private const val GLOW_OUTER_RADIUS = RING_INNER_RADIUS
     private const val GLOW_INNER_RADIUS = RING_INNER_RADIUS - 1.0
     private const val GLOW_BRIGHTNESS_FRACTION = 0.35
-    private val CONTENT_ROWS = CLOCK_Y until (VALUE_Y + PixelFont.GLYPH_HEIGHT)
 
     /** Draws the phone's battery level as a ring around the matrix's circular edge, filling
      * clockwise from the top like a charge indicator, with a dimmer inner glow line following the
@@ -94,7 +95,6 @@ object MatrixRenderer {
         val fillDegrees = percent.coerceIn(0, 100) / 100.0 * 360.0
         val glowBrightness = (brightness * GLOW_BRIGHTNESS_FRACTION).roundToInt()
         for (y in 0 until SIZE) {
-            if (y in CONTENT_ROWS) continue
             for (x in 0 until SIZE) {
                 val dx = x - center
                 val dy = y - center
