@@ -72,18 +72,23 @@ object MatrixRenderer {
 
     // The ring traces the matrix's circular silhouette (radius ~12.5 from center, same "bounding
     // circle" model used throughout this renderer) rather than any real per-LED map, since that
-    // map isn't available -- best-effort/unverified.
+    // map isn't available -- best-effort/unverified. Excludes the clock/value's row band
+    // entirely (rather than relying on the ring radius happening not to reach that far in): on
+    // real hardware the ring was overlapping that text, so this guarantees separation regardless
+    // of exactly how wide a row's content gets. What's left is a top cap and a bottom cap, not a
+    // full circle.
     private const val RING_OUTER_RADIUS = 12.5
     private const val RING_INNER_RADIUS = 11.5
-    private const val RING_TRACK_BRIGHTNESS = 200
+    private val CONTENT_ROWS = CLOCK_Y until (VALUE_Y + PixelFont.GLYPH_HEIGHT)
 
     /** Draws the phone's battery level as a ring around the matrix's circular edge, filling
-     * clockwise from the top like a charge indicator; the unfilled remainder of the ring stays
-     * lit at a low brightness so the full circle is always visible, not just the filled arc. */
+     * clockwise from the top like a charge indicator; the unfilled remainder of the ring is left
+     * off rather than dimly lit. */
     private fun drawBatteryRing(grid: IntArray, percent: Int, brightness: Int) {
         val center = (SIZE - 1) / 2.0
         val fillDegrees = percent.coerceIn(0, 100) / 100.0 * 360.0
         for (y in 0 until SIZE) {
+            if (y in CONTENT_ROWS) continue
             for (x in 0 until SIZE) {
                 val dx = x - center
                 val dy = y - center
@@ -91,21 +96,22 @@ object MatrixRenderer {
                 if (dist < RING_INNER_RADIUS || dist > RING_OUTER_RADIUS) continue
                 var angleDeg = Math.toDegrees(atan2(dx, -dy))
                 if (angleDeg < 0) angleDeg += 360.0
-                grid[y * SIZE + x] = if (angleDeg <= fillDegrees) brightness else RING_TRACK_BRIGHTNESS
+                if (angleDeg <= fillDegrees) grid[y * SIZE + x] = brightness
             }
         }
     }
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
-        // No ":" separator -- the 1px inter-character gap below keeps hour and minute from
-        // visually running together instead.
         val text = "%02d%02d".format(time.hour, time.minute)
-        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 1)
+        // No ":" separator. Normally a 1px gap follows every character, but the hour pair reads
+        // as having a 2px gap on real hardware -- closing just that one gap (between the two hour
+        // digits) pulls the minute pair 1px left with it, which is the requested fix.
+        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 2)
         var x = centeredStart(totalWidth, SIZE)
-        for (c in text) {
+        for ((i, c) in text.withIndex()) {
             drawGlyph(grid, PixelFont.statusDigits.getValue(c), x, CLOCK_Y, brightness)
-            x += PixelFont.STATUS_DIGIT_WIDTH + 1
+            x += PixelFont.STATUS_DIGIT_WIDTH + if (i == 0) 0 else 1
         }
     }
 

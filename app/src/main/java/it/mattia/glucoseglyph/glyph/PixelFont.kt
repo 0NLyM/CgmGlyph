@@ -50,8 +50,14 @@ internal object PixelFont {
     private val triangleDownRight = listOf(
         "1111111", "0111111", "0011111", "0001111", "0000111", "0000011", "0000001"
     )
+    // FLAT (stable): a small, precise right triangle -- flat vertical edge on the left, a single
+    // point on the right, padded 1 row top/bottom and 2 columns short of the full 7x7 canvas so
+    // it reads as clearly smaller than the up/down triangles. The previous version was built by
+    // mirroring `triangleUp` across its diagonal (a transpose), which is a reflection, not a
+    // rotation -- it put the flat edge on the right and the point on the left, so the arrow
+    // pointed the wrong way.
     private val triangleRight = listOf(
-        "0000001", "0000111", "0011111", "1111111", "0011111", "0000111", "0000001"
+        "0000000", "1000000", "1110000", "1111100", "1110000", "1000000", "0000000"
     )
     val arrows: Map<Trend, List<String>> = mapOf(
         Trend.DOUBLE_UP to triangleUp,
