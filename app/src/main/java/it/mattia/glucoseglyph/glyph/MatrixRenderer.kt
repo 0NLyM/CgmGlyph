@@ -24,14 +24,13 @@ import kotlin.math.roundToInt
 object MatrixRenderer {
     const val SIZE = 25
 
-    // 255 was assumed to be the ceiling for this raw int[] channel (it's the max of the separate,
-    // documented GlyphMatrixObject.setBrightness(0-255) API), but that call is a different,
-    // bitmap-object rendering path -- Nothing's own official GlyphButtonDemoService.kt fills this
-    // same raw setMatrixFrame(int[]) array with Random.nextInt(2047), implying the real ceiling is
-    // far higher. Unverified on this specific hardware/SDK build; report back if this over- or
-    // under-shoots.
-    private const val FULL_BRIGHTNESS = 2047
-    private const val DIM_BRIGHTNESS = 560
+    // 2047 (an 11-bit ceiling, going by Nothing's own official GlyphButtonDemoService.kt using
+    // Random.nextInt(2047) on this same raw array) measurably brightened the matrix over the
+    // previously-assumed 255 cap, but still reads slightly dimmer than other Glyph Toys -- trying
+    // the next natural ceiling up, 4095 (12-bit), on the same reasoning. Still unverified/a guess;
+    // report back whether this closes the gap, over-shoots, or renders oddly.
+    private const val FULL_BRIGHTNESS = 4095
+    private const val DIM_BRIGHTNESS = 1120
     private const val STALE_AFTER_MS = 15 * 60 * 1000L
 
     fun render(
@@ -65,7 +64,10 @@ object MatrixRenderer {
     // clipping (untested on real hardware; report back if it still clips and it can be dialed in
     // precisely).
     private const val CLOCK_Y = 3
-    private const val VALUE_Y = 10
+    // Back to the original app's exact value row -- (25 - 7-row font) / 2 -- so the now-7-tall
+    // value font lines up with the 7-tall arrow (both rows 9-15) exactly like it did originally,
+    // before the clock/battery rows existed.
+    private const val VALUE_Y = 9
     private const val ARROW_Y = 9
     private const val BATTERY_Y = 17
 
