@@ -99,14 +99,17 @@ class ControlX2Client(
 
         var egv: JSONObject? = null
         var homeScreenTrendIconId: Int? = null
+        var homeScreenAlertIconId: Int? = null
         for (i in 0 until array.length()) {
             val message = array.optJSONObject(i) ?: continue
             val name = message.optString("name")
             val params = message.optJSONObject("params") ?: continue
             when {
                 name.endsWith("CurrentEGVGuiDataResponse") -> egv = params
-                name.endsWith("HomeScreenMirrorResponse") ->
+                name.endsWith("HomeScreenMirrorResponse") -> {
                     homeScreenTrendIconId = params.optInt("cgmTrendIconId", -1).takeIf { it >= 0 }
+                    homeScreenAlertIconId = params.optInt("cgmAlertIconId", -1).takeIf { it >= 0 }
+                }
             }
         }
 
@@ -129,7 +132,10 @@ class ControlX2Client(
                 receivedEpochMillis = System.currentTimeMillis(),
                 // ControlX2's own convention (GlucoseHeroCard): mgdl == 0 means no CGM is
                 // connected to the pump, shown there as "n/a".
-                valid = cgmReading > 0
+                valid = cgmReading > 0,
+                // HomeScreenMirrorResponse.CGMAlertIcon.REPLACE_SENSOR == 11: the pump's own
+                // "sensor expired, insert a new one" alert.
+                sensorExpired = homeScreenAlertIconId == 11
             )
         )
     }

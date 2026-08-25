@@ -54,8 +54,8 @@ object MatrixRenderer {
         when {
             reading == null -> drawPlaceholder(grid, "---", brightness)
             !reading.valid -> drawPlaceholder(grid, "n/a", brightness)
-            useMmol -> drawMmol(grid, reading.mmol(), reading.trend, brightness)
-            else -> drawMgdl(grid, reading.mgdl, reading.trend, brightness)
+            useMmol -> drawMmol(grid, reading.mmol(), reading.trend, reading.sensorExpired, brightness)
+            else -> drawMgdl(grid, reading.mgdl, reading.trend, reading.sensorExpired, brightness)
         }
         return grid
     }
@@ -105,16 +105,16 @@ object MatrixRenderer {
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
-        // No ":" separator -- a uniform 1px gap between every character keeps hour and minute
-        // from visually running together instead. (A previous attempt removed the gap between the
-        // two hour digits entirely to fix a reported 2px-look gap, but that left them touching
-        // with no separation at all -- back to the plain, uniform gap.)
-        val text = "%02d%02d".format(time.hour, time.minute)
-        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 1)
+        // "HH:MM" with a dedicated 1px-wide colon glyph between hour and minute; every character
+        // (digit or colon) is separated from its neighbour by a uniform 1px gap.
+        val text = "%02d:%02d".format(time.hour, time.minute)
+        fun widthOf(c: Char) = if (c == ':') PixelFont.STATUS_COLON_WIDTH else PixelFont.STATUS_DIGIT_WIDTH
+        val totalWidth = text.sumOf { widthOf(it) } + (text.length - 1)
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            drawGlyph(grid, PixelFont.statusDigits.getValue(c), x, CLOCK_Y, brightness)
-            x += PixelFont.STATUS_DIGIT_WIDTH + 1
+            val glyph = if (c == ':') PixelFont.statusColon else PixelFont.statusDigits.getValue(c)
+            drawGlyph(grid, glyph, x, CLOCK_Y, brightness)
+            x += widthOf(c) + 1
         }
     }
 
@@ -127,11 +127,13 @@ object MatrixRenderer {
         }
     }
 
-    private fun drawMgdl(grid: IntArray, mgdl: Int, trend: Trend, brightness: Int) {
-        drawValueAndArrow(grid, mgdl.coerceIn(0, 999).toString(), trend, brightness)
+    private fun drawMgdl(grid: IntArray, mgdl: Int, trend: Trend, sensorExpired: Boolean, brightness: Int) {
+        drawValueAndArrow(grid, mgdl.coerceIn(0, 999).toString(), trend, sensorExpired, brightness)
     }
 
-    private fun drawMmol(grid: IntArray, mmol: Double, trend: Trend, brightness: Int) {
+    private fun drawMmol(
+        grid: IntArray, mmol: Double, trend: Trend, sensorExpired: Boolean, brightness: Int
+    ) {
         // Below 10 mmol/L there's room for a decimal place next to the arrow; at/above it,
         // drop the decimal so "value + arrow" still fits on the same row as mg/dL does.
         val text = if (mmol < 10.0) {
@@ -139,20 +141,18 @@ object MatrixRenderer {
         } else {
             mmol.roundToInt().coerceAtMost(99).toString()
         }
-        drawValueAndArrow(grid, text, trend, brightness)
+        drawValueAndArrow(grid, text, trend, sensorExpired, brightness)
     }
 
     /** Draws "value + arrow" as a single block centered as a unit on the matrix, so the pair
-     * stays visually centered regardless of how many digits the value has. */
-    private fun drawValueAndArrow(grid: IntArray, text: String, trend: Trend, brightness: Int) {
-        // Digit '1's glyph leaves its entire rightmost column unlit (it's drawn narrow, off-center
-        // in its 5-wide slot), so pairing it with the usual 1px coded gap reads as a 2px gap --
-        // skip the coded gap after a '1' so the total blank width matches every other digit pair.
-        fun gapAfter(c: Char) = if (c == '1') 0 else 1
-
+     * stays visually centered regardless of how many digits the value has. When the pump reports
+     * the CGM sensor as expired, an "X" takes the trend arrow's place instead. */
+    private fun drawValueAndArrow(
+        grid: IntArray, text: String, trend: Trend, sensorExpired: Boolean, brightness: Int
+    ) {
         var totalWidth = 0
         for (c in text) {
-            totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH) + gapAfter(c)
+            totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH) + 1
         }
         totalWidth += PixelFont.ARROW_WIDTH
         var x = centeredStart(totalWidth, SIZE)
@@ -160,14 +160,15 @@ object MatrixRenderer {
         for (c in text) {
             if (c == '.') {
                 drawGlyph(grid, PixelFont.dot, x, VALUE_Y, brightness)
-                x += PixelFont.DOT_WIDTH + gapAfter(c)
+                x += PixelFont.DOT_WIDTH + 1
             } else {
                 drawGlyph(grid, PixelFont.digits.getValue(c), x, VALUE_Y, brightness)
-                x += PixelFont.DIGIT_WIDTH + gapAfter(c)
+                x += PixelFont.DIGIT_WIDTH + 1
             }
         }
 
-        drawGlyph(grid, PixelFont.arrows.getValue(trend), x, ARROW_Y, brightness)
+        val arrowGlyph = if (sensorExpired) PixelFont.expiredSensor else PixelFont.arrows.getValue(trend)
+        drawGlyph(grid, arrowGlyph, x, ARROW_Y, brightness)
     }
 
     private fun centeredStart(contentWidth: Int, availableWidth: Int): Int =

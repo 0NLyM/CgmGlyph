@@ -54,7 +54,10 @@ data class GlucoseReading(
     val receivedEpochMillis: Long,
     /** False when the pump reports mgdl == 0, ControlX2's own convention for "no CGM connected"
      * (shown there as "n/a"). */
-    val valid: Boolean
+    val valid: Boolean,
+    /** True when HomeScreenMirrorResponse.cgmAlertIconId is REPLACE_SENSOR (11) -- the pump's own
+     * "sensor expired, insert a new one" alert, the same one it shows on its Dashboard. */
+    val sensorExpired: Boolean = false
 ) {
     fun mmol(): Double = mgdl / 18.0182
 }
