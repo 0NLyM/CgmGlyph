@@ -68,35 +68,44 @@ object MatrixRenderer {
     // 3-digit value with the arrow still fits cleanly this far from center.
     private const val CLOCK_Y = 6
     private const val VALUE_Y = 12
-    private const val ARROW_Y = 12
+    // The arrow shrank from 7 to 5 rows tall; centering it within the 7-row value band instead of
+    // pinning it to the same top row keeps it looking aligned with the digits next to it.
+    private const val ARROW_Y = VALUE_Y + 1
 
-    // The ring traces the matrix's circular silhouette (radius ~12.5 from center, same "bounding
-    // circle" model used throughout this renderer) rather than any real per-LED map, since that
-    // map isn't available -- best-effort/unverified. Excludes the clock/value's row band
-    // entirely (rather than relying on the ring radius happening not to reach that far in): on
-    // real hardware the ring was overlapping that text, so this guarantees separation regardless
-    // of exactly how wide a row's content gets. What's left is a top cap and a bottom cap, not a
-    // full circle.
-    private const val RING_OUTER_RADIUS = 12.5
-    private const val RING_INNER_RADIUS = 11.5
+    // Pulled in from the true edge (radius ~12.5, which is what rows 0/1 in the cap would need)
+    // to 10.0: at radius 12.5 the cap's widest row was computing ~21 columns of ring, far more
+    // than that row can really have given the matrix's circular LED layout, which is what was
+    // getting clipped on real hardware. At 10.0 the ring naturally can't reach rows 0-1 at all
+    // (they're geometrically outside a radius-10 circle centered on the matrix), which keeps every
+    // row it does use to a narrower, hopefully-safer column range -- still an estimate, unverified.
+    private const val RING_OUTER_RADIUS = 10.0
+    private const val RING_INNER_RADIUS = 9.0
+    // A second, dimmer ring just inside the main one, for a soft glow/halo look.
+    private const val GLOW_OUTER_RADIUS = RING_INNER_RADIUS
+    private const val GLOW_INNER_RADIUS = RING_INNER_RADIUS - 1.0
+    private const val GLOW_BRIGHTNESS_FRACTION = 0.35
     private val CONTENT_ROWS = CLOCK_Y until (VALUE_Y + PixelFont.GLYPH_HEIGHT)
 
     /** Draws the phone's battery level as a ring around the matrix's circular edge, filling
-     * clockwise from the top like a charge indicator; the unfilled remainder of the ring is left
-     * off rather than dimly lit. */
+     * clockwise from the top like a charge indicator, with a dimmer inner glow line following the
+     * same fill; the unfilled remainder of both rings is left off rather than dimly lit. */
     private fun drawBatteryRing(grid: IntArray, percent: Int, brightness: Int) {
         val center = (SIZE - 1) / 2.0
         val fillDegrees = percent.coerceIn(0, 100) / 100.0 * 360.0
+        val glowBrightness = (brightness * GLOW_BRIGHTNESS_FRACTION).roundToInt()
         for (y in 0 until SIZE) {
             if (y in CONTENT_ROWS) continue
             for (x in 0 until SIZE) {
                 val dx = x - center
                 val dy = y - center
                 val dist = sqrt(dx * dx + dy * dy)
-                if (dist < RING_INNER_RADIUS || dist > RING_OUTER_RADIUS) continue
+                val inMainRing = dist in RING_INNER_RADIUS..RING_OUTER_RADIUS
+                val inGlowRing = dist in GLOW_INNER_RADIUS..GLOW_OUTER_RADIUS
+                if (!inMainRing && !inGlowRing) continue
                 var angleDeg = Math.toDegrees(atan2(dx, -dy))
                 if (angleDeg < 0) angleDeg += 360.0
-                if (angleDeg <= fillDegrees) grid[y * SIZE + x] = brightness
+                if (angleDeg > fillDegrees) continue
+                grid[y * SIZE + x] = if (inMainRing) brightness else glowBrightness
             }
         }
     }

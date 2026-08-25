@@ -3,7 +3,7 @@ package it.mattia.glucoseglyph.glyph
 import it.mattia.glucoseglyph.model.Trend
 
 /**
- * A 5x7 dot-matrix font (digits, dash, decimal point) and a set of 7x7 trend-arrow glyphs,
+ * A 5x7 dot-matrix font (digits, dash, decimal point) and a set of 5x5 trend-arrow glyphs,
  * hand-drawn to read clearly on the Phone (3) Glyph Matrix's 25x25 LEDs.
  */
 internal object PixelFont {
@@ -34,44 +34,41 @@ internal object PixelFont {
     /** A single lit pixel on the baseline, used as a decimal point. */
     val dot: List<String> = listOf("0", "0", "0", "0", "0", "0", "1")
 
-    // Solid filled triangles, no separate shaft -- matching the plain triangle look the
-    // notification icon used. The earlier chevron-plus-shaft design drew DOUBLE_UP/DOUBLE_DOWN as
-    // two stacked chevrons, which read as two triangles glued together rather than one arrow;
-    // single and double magnitude now share the same single-triangle shape per direction.
-    private val triangleUp = listOf(
-        "0001000", "0001000", "0011100", "0011100", "0111110", "0111110", "1111111"
+    // Chevron-head-plus-shaft arrows, back at a compact 5x5 (down from 7x7) -- a small pointed
+    // head with a short trailing line, rather than the solid filled triangles tried in between.
+    // Single and double magnitude still share one shape per direction (the earlier chevron design
+    // stacked two chevrons for DOUBLE_UP/DOUBLE_DOWN, which read as two triangles glued together).
+    private val chevronUp = listOf(
+        "00100", "01110", "00100", "00100", "00100"
     )
-    private val triangleDown = listOf(
-        "1111111", "0111110", "0111110", "0011100", "0011100", "0001000", "0001000"
+    private val chevronDown = listOf(
+        "00100", "00100", "00100", "01110", "00100"
     )
-    private val triangleUpRight = listOf(
-        "0000001", "0000011", "0000111", "0001111", "0011111", "0111111", "1111111"
+    // Diagonal chevrons hand-drawn directly (not derived by transforming chevronUp/Right) after an
+    // earlier bug: rotating a shape by transposing its grid mirrors it across the diagonal instead
+    // of rotating it, which silently flips the direction it points.
+    private val chevronUpRight = listOf(
+        "00111", "00011", "00100", "01000", "10000"
     )
-    private val triangleDownRight = listOf(
-        "1111111", "0111111", "0011111", "0001111", "0000111", "0000011", "0000001"
+    private val chevronDownRight = listOf(
+        "10000", "01000", "00100", "00011", "00111"
     )
-    // FLAT (stable): a small, precise right triangle -- flat vertical edge on the left, a single
-    // point on the right, padded 1 row top/bottom and 2 columns short of the full 7x7 canvas so
-    // it reads as clearly smaller than the up/down triangles. The previous version was built by
-    // mirroring `triangleUp` across its diagonal (a transpose), which is a reflection, not a
-    // rotation -- it put the flat edge on the right and the point on the left, so the arrow
-    // pointed the wrong way.
-    private val triangleRight = listOf(
-        "0000000", "1000000", "1110000", "1111100", "1110000", "1000000", "0000000"
+    private val chevronRight = listOf(
+        "00000", "00010", "11111", "00010", "00000"
     )
     val arrows: Map<Trend, List<String>> = mapOf(
-        Trend.DOUBLE_UP to triangleUp,
-        Trend.SINGLE_UP to triangleUp,
-        Trend.FORTY_FIVE_UP to triangleUpRight,
-        Trend.FLAT to triangleRight,
-        Trend.FORTY_FIVE_DOWN to triangleDownRight,
-        Trend.SINGLE_DOWN to triangleDown,
-        Trend.DOUBLE_DOWN to triangleDown,
+        Trend.DOUBLE_UP to chevronUp,
+        Trend.SINGLE_UP to chevronUp,
+        Trend.FORTY_FIVE_UP to chevronUpRight,
+        Trend.FLAT to chevronRight,
+        Trend.FORTY_FIVE_DOWN to chevronDownRight,
+        Trend.SINGLE_DOWN to chevronDown,
+        Trend.DOUBLE_DOWN to chevronDown,
         Trend.UNKNOWN to listOf(
-            "0000000", "0000000", "0000000", "0111110", "0000000", "0000000", "0000000"
+            "00000", "00000", "01110", "00000", "00000"
         )
     )
-    const val ARROW_WIDTH = 7
+    const val ARROW_WIDTH = 5
 
     // Clock uses a dedicated 4x5 font -- a step up from the original 3px-wide version (which read
     // as noticeably thinner/smaller than the glucose value) but narrower than the full 5px digit
