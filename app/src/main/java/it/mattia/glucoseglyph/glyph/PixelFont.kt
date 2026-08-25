@@ -34,45 +34,45 @@ internal object PixelFont {
     /** A single lit pixel on the baseline, used as a decimal point. */
     val dot: List<String> = listOf("0", "0", "0", "0", "0", "0", "1")
 
-    // 7x7 chevron-tip-plus-shaft arrows, each direction hand-checked for a continuous,
-    // unambiguous shape (the earlier 6px diagonals had disconnected pixels that read as a
-    // stray right triangle on the real hardware instead of an arrow).
+    // Solid filled triangles, no separate shaft -- matching the plain triangle look the
+    // notification icon used. The earlier chevron-plus-shaft design drew DOUBLE_UP/DOUBLE_DOWN as
+    // two stacked chevrons, which read as two triangles glued together rather than one arrow;
+    // single and double magnitude now share the same single-triangle shape per direction.
+    private val triangleUp = listOf(
+        "0001000", "0001000", "0011100", "0011100", "0111110", "0111110", "1111111"
+    )
+    private val triangleDown = listOf(
+        "1111111", "0111110", "0111110", "0011100", "0011100", "0001000", "0001000"
+    )
+    private val triangleUpRight = listOf(
+        "0000001", "0000011", "0000111", "0001111", "0011111", "0111111", "1111111"
+    )
+    private val triangleDownRight = listOf(
+        "1111111", "0111111", "0011111", "0001111", "0000111", "0000011", "0000001"
+    )
+    private val triangleRight = listOf(
+        "0000001", "0000111", "0011111", "1111111", "0011111", "0000111", "0000001"
+    )
     val arrows: Map<Trend, List<String>> = mapOf(
-        Trend.DOUBLE_UP to listOf(
-            "0001000", "0011100", "0101010", "0000000", "0001000", "0011100", "0101010"
-        ),
-        Trend.SINGLE_UP to listOf(
-            "0001000", "0011100", "0101010", "0001000", "0001000", "0001000", "0001000"
-        ),
-        Trend.FORTY_FIVE_UP to listOf(
-            "0000111", "0000011", "0000100", "0001000", "0010000", "0100000", "1000000"
-        ),
-        Trend.FLAT to listOf(
-            "0000000", "0000100", "0000010", "1111111", "0000010", "0000100", "0000000"
-        ),
-        Trend.FORTY_FIVE_DOWN to listOf(
-            "1000000", "0100000", "0010000", "0001000", "0000100", "0000011", "0000111"
-        ),
-        Trend.SINGLE_DOWN to listOf(
-            "0001000", "0001000", "0001000", "0001000", "0101010", "0011100", "0001000"
-        ),
-        Trend.DOUBLE_DOWN to listOf(
-            "0101010", "0011100", "0001000", "0000000", "0101010", "0011100", "0001000"
-        ),
+        Trend.DOUBLE_UP to triangleUp,
+        Trend.SINGLE_UP to triangleUp,
+        Trend.FORTY_FIVE_UP to triangleUpRight,
+        Trend.FLAT to triangleRight,
+        Trend.FORTY_FIVE_DOWN to triangleDownRight,
+        Trend.SINGLE_DOWN to triangleDown,
+        Trend.DOUBLE_DOWN to triangleDown,
         Trend.UNKNOWN to listOf(
             "0000000", "0000000", "0000000", "0111110", "0000000", "0000000", "0000000"
         )
     )
     const val ARROW_WIDTH = 7
 
-    // Clock/battery use a dedicated 4x5 font -- a step up from the original 3px-wide version
-    // (which read as noticeably thinner/smaller than the glucose value) but narrower than the
-    // full 5px digit font above (which clipped badly at these outer rows: the matrix's circular
-    // LED layout leaves far less physical width there than in the middle). Same rounded-rectangle
-    // design language as `digits` above, just one column narrower; drawStatusText now puts a 1px
-    // gap between every character (this font was previously packed with zero gap, which let
-    // adjacent glyphs' strokes touch and bleed into each other -- e.g. two digits' vertical
-    // sides sitting in adjacent columns read as one blob rather than two distinct "0"s).
+    // Clock uses a dedicated 4x5 font -- a step up from the original 3px-wide version (which read
+    // as noticeably thinner/smaller than the glucose value) but narrower than the full 5px digit
+    // font above (which clipped badly at these outer rows: the matrix's circular LED layout
+    // leaves far less physical width there than in the middle). Same rounded-rectangle design
+    // language as `digits` above, just one column narrower; drawn with a 1px gap between every
+    // character so adjacent glyphs' strokes don't touch and bleed into each other.
     val statusDigits: Map<Char, List<String>> = mapOf(
         '0' to listOf("0110", "1001", "1001", "1001", "0110"),
         '1' to listOf("0010", "0110", "0010", "0010", "0111"),
@@ -86,11 +86,4 @@ internal object PixelFont {
         '9' to listOf("0110", "1001", "0111", "0001", "0110")
     )
     const val STATUS_DIGIT_WIDTH = 4
-
-    /** "%" at status-digit scale: an isolated 1x1 dot top-left, a blank row, a single stroke
-     * pixel in the middle, another blank row, then an isolated 1x1 dot bottom-right -- each part
-     * separated by a gap row so the two dots and the stroke read as distinct pieces instead of
-     * bleeding into vertical bars. */
-    val statusPercent: List<String> = listOf("1000", "0000", "0100", "0000", "0001")
-    const val STATUS_PERCENT_WIDTH = 4
 }

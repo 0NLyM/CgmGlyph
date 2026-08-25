@@ -12,6 +12,7 @@ import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
 import it.mattia.glucoseglyph.model.Trend
 import it.mattia.glucoseglyph.net.ControlX2Client
+import it.mattia.glucoseglyph.ui.MainActivity
 import kotlin.concurrent.thread
 
 /**
@@ -125,6 +126,11 @@ class GlucosePollingService : Service() {
             this, 0, stopIntent,
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
         )
+        val openAppIntent = Intent(this, MainActivity::class.java)
+        val openAppPendingIntent = android.app.PendingIntent.getActivity(
+            this, 0, openAppIntent,
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+        )
         // The small icon *is* the point of this notification: rendering the glucose value and
         // trend arrow into it puts the reading directly in the status bar, not just in the shade.
         val icon = StatusBarIconRenderer.render(GlucoseState.current, settings.useMmol)
@@ -132,6 +138,7 @@ class GlucosePollingService : Service() {
             .setContentTitle("Glucose Glyph")
             .setContentText(text)
             .setSmallIcon(icon)
+            .setContentIntent(openAppPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             // Without this, re-posting the notification on every poll (new icon, same ID) can

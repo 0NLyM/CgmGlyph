@@ -4,7 +4,9 @@ import it.mattia.glucoseglyph.model.GlucoseReading
 import it.mattia.glucoseglyph.model.Trend
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.math.atan2
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * Renders the current glucose reading as a raw 25x25 brightness grid (row-major) matching the
@@ -15,11 +17,10 @@ import kotlin.math.roundToInt
  * brightness; a stale one (no update in a while) dims automatically instead of adding an icon.
  * No reading yet, or ControlX2 reporting no CGM connected to the pump (its own "n/a"), both show
  * in full brightness -- those are states worth noticing, not quietly fading into the background.
- * On the physical Glyph Matrix only, a small clock sits above the value and the phone's battery
- * percentage below it, at the same brightness as the value (so nothing looks like a washed-out
- * decoration) but in a narrower dedicated font -- the value's own 5px-wide digits were tried for
- * these two rows and clipped badly, since the matrix's circular LED layout leaves far less
- * physical width near the edges than in the middle.
+ * On the physical Glyph Matrix only, a small clock sits above the value, equally spaced from the
+ * top and bottom edges of the matrix as the value is, and the phone's battery level is drawn as a
+ * ring that traces the matrix's circular edge (clockwise from the top, like a charge indicator)
+ * instead of a percentage number.
  */
 object MatrixRenderer {
     const val SIZE = 25
@@ -46,8 +47,8 @@ object MatrixRenderer {
         val brightness = if (reading != null && reading.valid && stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
 
         if (includeStatusRows) {
+            if (batteryPercent != null) drawBatteryRing(grid, batteryPercent, brightness)
             drawClock(grid, nowMillis, brightness)
-            if (batteryPercent != null) drawBattery(grid, batteryPercent, brightness)
         }
 
         when {
@@ -59,45 +60,52 @@ object MatrixRenderer {
         return grid
     }
 
-    // One row further out than the previously-clean row 4/16 -- with the wider 4px status font,
-    // this is a best-effort estimate of what the matrix's circular LED mask still allows without
-    // clipping (untested on real hardware; report back if it still clips and it can be dialed in
-    // precisely).
-    private const val CLOCK_Y = 3
-    // Back to the original app's exact value row -- (25 - 7-row font) / 2 -- so the now-7-tall
-    // value font lines up with the 7-tall arrow (both rows 9-15) exactly like it did originally,
-    // before the clock/battery rows existed.
-    private const val VALUE_Y = 9
-    private const val ARROW_Y = 9
-    private const val BATTERY_Y = 17
+    // Clock (5 rows) then a 1px gap then value+arrow (7 rows) form a 13-row block, centered
+    // top-to-bottom with equal 6-row margins above and below -- so the clock and the glucose
+    // value sit equidistant from the matrix's top and bottom edges. This is a deliberate step
+    // away from centering the value+arrow on the matrix's true vertical center (where the
+    // circular LED layout has the most physical width per row); best-effort/unverified whether a
+    // 3-digit value with the arrow still fits cleanly this far from center.
+    private const val CLOCK_Y = 6
+    private const val VALUE_Y = 12
+    private const val ARROW_Y = 12
+
+    // The ring traces the matrix's circular silhouette (radius ~12.5 from center, same "bounding
+    // circle" model used throughout this renderer) rather than any real per-LED map, since that
+    // map isn't available -- best-effort/unverified.
+    private const val RING_OUTER_RADIUS = 12.5
+    private const val RING_INNER_RADIUS = 11.5
+    private const val RING_TRACK_BRIGHTNESS = 200
+
+    /** Draws the phone's battery level as a ring around the matrix's circular edge, filling
+     * clockwise from the top like a charge indicator; the unfilled remainder of the ring stays
+     * lit at a low brightness so the full circle is always visible, not just the filled arc. */
+    private fun drawBatteryRing(grid: IntArray, percent: Int, brightness: Int) {
+        val center = (SIZE - 1) / 2.0
+        val fillDegrees = percent.coerceIn(0, 100) / 100.0 * 360.0
+        for (y in 0 until SIZE) {
+            for (x in 0 until SIZE) {
+                val dx = x - center
+                val dy = y - center
+                val dist = sqrt(dx * dx + dy * dy)
+                if (dist < RING_INNER_RADIUS || dist > RING_OUTER_RADIUS) continue
+                var angleDeg = Math.toDegrees(atan2(dx, -dy))
+                if (angleDeg < 0) angleDeg += 360.0
+                grid[y * SIZE + x] = if (angleDeg <= fillDegrees) brightness else RING_TRACK_BRIGHTNESS
+            }
+        }
+    }
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
-        // No ":" separator -- the 1px inter-character gap in drawStatusText now keeps hour and
-        // minute from visually running together instead.
+        // No ":" separator -- the 1px inter-character gap below keeps hour and minute from
+        // visually running together instead.
         val text = "%02d%02d".format(time.hour, time.minute)
-        drawStatusText(grid, text, y = CLOCK_Y, brightness)
-    }
-
-    private fun drawBattery(grid: IntArray, percent: Int, brightness: Int) {
-        drawStatusText(grid, "${percent.coerceIn(0, 100)}%", y = BATTERY_Y, brightness)
-    }
-
-    /** Draws digits/'%' in the status font on the given row, centered, with a 1px gap between
-     * characters (same convention as drawValueAndArrow) -- at row 3/17 there's roughly 17-20px of
-     * physical width available, best-effort/unverified on real hardware. */
-    private fun drawStatusText(grid: IntArray, text: String, y: Int, brightness: Int) {
-        fun widthOf(c: Char) = if (c == '%') PixelFont.STATUS_PERCENT_WIDTH else PixelFont.STATUS_DIGIT_WIDTH
-
-        var totalWidth = 0
-        for (c in text) totalWidth += widthOf(c)
-        totalWidth += text.length - 1 // 1px gap between characters
-
+        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 1)
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            val pattern = if (c == '%') PixelFont.statusPercent else PixelFont.statusDigits.getValue(c)
-            drawGlyph(grid, pattern, x, y, brightness)
-            x += widthOf(c) + 1
+            drawGlyph(grid, PixelFont.statusDigits.getValue(c), x, CLOCK_Y, brightness)
+            x += PixelFont.STATUS_DIGIT_WIDTH + 1
         }
     }
 
