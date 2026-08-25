@@ -7,8 +7,8 @@ import java.time.ZoneId
 import kotlin.math.roundToInt
 
 /**
- * Renders the current glucose reading as a raw 25x25 brightness grid (row-major, values 0-255)
- * matching the format expected by GlyphMatrixManager.setMatrixFrame(IntArray).
+ * Renders the current glucose reading as a raw 25x25 brightness grid (row-major) matching the
+ * format expected by GlyphMatrixManager.setMatrixFrame(IntArray).
  *
  * Style notes (deliberately minimal, "Nothing"-esque): the matrix is monochrome hardware, so the
  * only expressive dimension left is brightness. A fresh, valid reading is drawn at full
@@ -24,8 +24,14 @@ import kotlin.math.roundToInt
 object MatrixRenderer {
     const val SIZE = 25
 
-    private const val FULL_BRIGHTNESS = 255
-    private const val DIM_BRIGHTNESS = 70
+    // 255 was assumed to be the ceiling for this raw int[] channel (it's the max of the separate,
+    // documented GlyphMatrixObject.setBrightness(0-255) API), but that call is a different,
+    // bitmap-object rendering path -- Nothing's own official GlyphButtonDemoService.kt fills this
+    // same raw setMatrixFrame(int[]) array with Random.nextInt(2047), implying the real ceiling is
+    // far higher. Unverified on this specific hardware/SDK build; report back if this over- or
+    // under-shoots.
+    private const val FULL_BRIGHTNESS = 2047
+    private const val DIM_BRIGHTNESS = 560
     private const val STALE_AFTER_MS = 15 * 60 * 1000L
 
     fun render(
