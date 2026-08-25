@@ -82,45 +82,39 @@ object MatrixRenderer {
     // for a ring behind content, not a bug to route around.
     private const val RING_OUTER_RADIUS = 12.5
     private const val RING_INNER_RADIUS = 11.5
-    // A second, dimmer ring just inside the main one, for a soft glow/halo look.
-    private const val GLOW_OUTER_RADIUS = RING_INNER_RADIUS
-    private const val GLOW_INNER_RADIUS = RING_INNER_RADIUS - 1.0
-    private const val GLOW_BRIGHTNESS_FRACTION = 0.35
 
-    /** Draws the phone's battery level as a ring around the matrix's circular edge, filling
-     * clockwise from the top like a charge indicator, with a dimmer inner glow line following the
-     * same fill; the unfilled remainder of both rings is left off rather than dimly lit. */
+    /** Draws the phone's battery level as a single-line ring around the matrix's circular edge,
+     * filling clockwise from the top like a charge indicator; the unfilled remainder is left off
+     * rather than dimly lit. */
     private fun drawBatteryRing(grid: IntArray, percent: Int, brightness: Int) {
         val center = (SIZE - 1) / 2.0
         val fillDegrees = percent.coerceIn(0, 100) / 100.0 * 360.0
-        val glowBrightness = (brightness * GLOW_BRIGHTNESS_FRACTION).roundToInt()
         for (y in 0 until SIZE) {
             for (x in 0 until SIZE) {
                 val dx = x - center
                 val dy = y - center
                 val dist = sqrt(dx * dx + dy * dy)
-                val inMainRing = dist in RING_INNER_RADIUS..RING_OUTER_RADIUS
-                val inGlowRing = dist in GLOW_INNER_RADIUS..GLOW_OUTER_RADIUS
-                if (!inMainRing && !inGlowRing) continue
+                if (dist < RING_INNER_RADIUS || dist > RING_OUTER_RADIUS) continue
                 var angleDeg = Math.toDegrees(atan2(dx, -dy))
                 if (angleDeg < 0) angleDeg += 360.0
                 if (angleDeg > fillDegrees) continue
-                grid[y * SIZE + x] = if (inMainRing) brightness else glowBrightness
+                grid[y * SIZE + x] = brightness
             }
         }
     }
 
     private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
+        // No ":" separator -- a uniform 1px gap between every character keeps hour and minute
+        // from visually running together instead. (A previous attempt removed the gap between the
+        // two hour digits entirely to fix a reported 2px-look gap, but that left them touching
+        // with no separation at all -- back to the plain, uniform gap.)
         val text = "%02d%02d".format(time.hour, time.minute)
-        // No ":" separator. Normally a 1px gap follows every character, but the hour pair reads
-        // as having a 2px gap on real hardware -- closing just that one gap (between the two hour
-        // digits) pulls the minute pair 1px left with it, which is the requested fix.
-        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 2)
+        val totalWidth = text.length * PixelFont.STATUS_DIGIT_WIDTH + (text.length - 1)
         var x = centeredStart(totalWidth, SIZE)
-        for ((i, c) in text.withIndex()) {
+        for (c in text) {
             drawGlyph(grid, PixelFont.statusDigits.getValue(c), x, CLOCK_Y, brightness)
-            x += PixelFont.STATUS_DIGIT_WIDTH + if (i == 0) 0 else 1
+            x += PixelFont.STATUS_DIGIT_WIDTH + 1
         }
     }
 
@@ -151,22 +145,25 @@ object MatrixRenderer {
     /** Draws "value + arrow" as a single block centered as a unit on the matrix, so the pair
      * stays visually centered regardless of how many digits the value has. */
     private fun drawValueAndArrow(grid: IntArray, text: String, trend: Trend, brightness: Int) {
-        var valueWidth = 0
-        for (c in text) valueWidth += if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH
-        valueWidth += text.length - 1 // 1px gap between glyphs
+        // Digit '1's glyph leaves its entire rightmost column unlit (it's drawn narrow, off-center
+        // in its 5-wide slot), so pairing it with the usual 1px coded gap reads as a 2px gap --
+        // skip the coded gap after a '1' so the total blank width matches every other digit pair.
+        fun gapAfter(c: Char) = if (c == '1') 0 else 1
 
-        // 1px gap between the value and the arrow: baked in below by always advancing x by
-        // "glyph width + 1" (including after the very last character).
-        val totalWidth = valueWidth + 1 + PixelFont.ARROW_WIDTH
+        var totalWidth = 0
+        for (c in text) {
+            totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH) + gapAfter(c)
+        }
+        totalWidth += PixelFont.ARROW_WIDTH
         var x = centeredStart(totalWidth, SIZE)
 
         for (c in text) {
             if (c == '.') {
                 drawGlyph(grid, PixelFont.dot, x, VALUE_Y, brightness)
-                x += PixelFont.DOT_WIDTH + 1
+                x += PixelFont.DOT_WIDTH + gapAfter(c)
             } else {
                 drawGlyph(grid, PixelFont.digits.getValue(c), x, VALUE_Y, brightness)
-                x += PixelFont.DIGIT_WIDTH + 1
+                x += PixelFont.DIGIT_WIDTH + gapAfter(c)
             }
         }
 
