@@ -35,25 +35,25 @@ internal object PixelFont {
     /** A single lit pixel on the baseline, used as a decimal point. */
     val dot: List<String> = listOf("0", "0", "0", "0", "0", "0", "1")
 
-    // 5 wide x 5 tall, transcribed pixel-for-pixel from the reference sheet: 3 shapes across the
-    // top (up, 45deg up, flat) and 3 across the bottom (45deg down, down, an "X" for an expired
-    // sensor -- not a trend at all, drawn here alongside the arrows since it's the same size/style
-    // and used in the same spot on the matrix).
-    private val up = listOf(
+    // 5 wide x 5 tall, transcribed pixel-for-pixel from the reference sheet. The designer
+    // confirmed each shape's meaning against a render of these exact patterns (labeled A-E) after
+    // an earlier guess at the up/down/flat/diagonal assignment turned out wrong on real hardware.
+    private val flat = listOf(
         "00100", "10110", "01111", "10110", "00100"
     )
-    private val fortyFiveUp = listOf(
+    private val up = listOf(
         "00100", "01110", "11111", "00100", "01010"
     )
-    private val flat = listOf(
+    private val down = listOf(
         "01010", "00100", "11111", "01110", "00100"
     )
-    private val fortyFiveDown = listOf(
+    private val fortyFiveUp = listOf(
         "11111", "01111", "00111", "11011", "01001"
     )
-    private val down = listOf(
+    private val fortyFiveDown = listOf(
         "01001", "11011", "00111", "01111", "11111"
     )
+    // Not part of this round's designer-confirmed relabeling -- kept as-is.
     val expiredSensor = listOf(
         "10011", "01010", "00100", "01010", "11001"
     )
