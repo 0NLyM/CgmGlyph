@@ -69,23 +69,22 @@ internal object PixelFont {
     )
     const val ARROW_WIDTH = 5
 
-    // 4 wide x 4 tall -- widened to match the glucose-value font's block style (each row here is
-    // that font's row 0/2/4/6, the same 4 rows that carry its top bar, upper and lower body, and
-    // bottom bar), instead of the older, separately-drawn thinner 3-wide clock font. A dedicated
-    // 1-wide colon glyph sits between HH and MM.
+    // 3 wide x 4 tall, transcribed from the reference sheet's two rows of digits (1-4, then
+    // 5-9); '0' wasn't drawn there, so it's designed here to match the others' block style. A
+    // dedicated 1-wide colon glyph sits between HH and MM.
     val statusDigits: Map<Char, List<String>> = mapOf(
-        '0' to listOf("0110", "1001", "1001", "0110"),
-        '1' to listOf("0010", "0010", "0010", "0111"),
-        '2' to listOf("1110", "0001", "1000", "1111"),
-        '3' to listOf("1110", "0001", "0001", "1110"),
-        '4' to listOf("0010", "0110", "1111", "0010"),
-        '5' to listOf("1111", "1000", "0001", "1110"),
-        '6' to listOf("0110", "1000", "1001", "0110"),
-        '7' to listOf("1111", "0010", "0100", "0100"),
-        '8' to listOf("0110", "1001", "1001", "0110"),
-        '9' to listOf("0110", "1001", "0001", "0110")
+        '0' to listOf("111", "101", "101", "111"),
+        '1' to listOf("010", "100", "010", "111"),
+        '2' to listOf("110", "001", "100", "111"),
+        '3' to listOf("111", "010", "001", "110"),
+        '4' to listOf("001", "010", "111", "001"),
+        '5' to listOf("111", "100", "001", "110"),
+        '6' to listOf("011", "100", "111", "011"),
+        '7' to listOf("110", "001", "011", "001"),
+        '8' to listOf("111", "000", "111", "111"),
+        '9' to listOf("110", "111", "001", "110")
     )
-    const val STATUS_DIGIT_WIDTH = 4
+    const val STATUS_DIGIT_WIDTH = 3
 
     val statusColon: List<String> = listOf("0", "1", "0", "1")
     const val STATUS_COLON_WIDTH = 1
