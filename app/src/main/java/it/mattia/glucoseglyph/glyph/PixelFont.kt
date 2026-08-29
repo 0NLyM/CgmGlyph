@@ -114,6 +114,25 @@ object PixelFont {
         "01001", "11011", "00111", "01111", "11111"
     )
 
+    // ALTERNATE: solid-block arrows, extracted pixel-for-pixel from the designer's second
+    // reference photo and confirmed shape-by-shape: drawn as stabile/su/giu across the top row
+    // and diagonale su/diagonale giu across the bottom row of that sheet.
+    private val altFlat = listOf(
+        "11000", "11110", "11111", "11110", "11000"
+    )
+    private val altUp = listOf(
+        "00100", "01110", "01110", "11111", "11111"
+    )
+    private val altDown = listOf(
+        "11111", "11111", "01110", "01110", "00100"
+    )
+    private val altFortyFiveUp = listOf(
+        "11111", "01111", "00111", "00011", "00001"
+    )
+    private val altFortyFiveDown = listOf(
+        "00001", "00011", "00111", "01111", "11111"
+    )
+
     val arrowSets: Map<ArrowStyle, Map<Trend, List<String>>> = mapOf(
         ArrowStyle.CURRENT to mapOf(
             Trend.DOUBLE_UP to currentUp,
@@ -124,6 +143,16 @@ object PixelFont {
             Trend.SINGLE_DOWN to currentDown,
             Trend.DOUBLE_DOWN to currentDown,
             Trend.UNKNOWN to currentFlat
+        ),
+        ArrowStyle.ALTERNATE to mapOf(
+            Trend.DOUBLE_UP to altUp,
+            Trend.SINGLE_UP to altUp,
+            Trend.FORTY_FIVE_UP to altFortyFiveUp,
+            Trend.FLAT to altFlat,
+            Trend.FORTY_FIVE_DOWN to altFortyFiveDown,
+            Trend.SINGLE_DOWN to altDown,
+            Trend.DOUBLE_DOWN to altDown,
+            Trend.UNKNOWN to altFlat
         )
     )
     const val ARROW_WIDTH = 5

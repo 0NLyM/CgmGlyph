@@ -27,21 +27,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -128,6 +129,7 @@ private fun SettingsScreen(
     var valueDigitStyle by remember { mutableStateOf(settings.valueDigitStyle) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
+    var showCustomization by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // Live-refresh the matrix preview and status text as new readings arrive.
@@ -144,12 +146,13 @@ private fun SettingsScreen(
         }
     }
 
+    // Fixed (non-scrolling) layout: everything essential lives on this one screen, and the
+    // style pickers open in a bottom sheet instead of extending the page.
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.systemBars)
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
@@ -269,33 +272,91 @@ private fun SettingsScreen(
             color = NothingGrey
         )
 
-        Spacer(Modifier.height(14.dp))
-        SectionLabel("PERSONALIZZAZIONE")
-        SettingsCard {
+        Spacer(Modifier.weight(1f))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showCustomization = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "PERSONALIZZAZIONE",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NothingWhite
+                )
+                Text("›", style = MaterialTheme.typography.titleLarge, color = NothingRed)
+            }
+        }
+    }
+
+    if (showCustomization) {
+        CustomizationSheet(
+            arrowStyle = arrowStyle,
+            clockDigitStyle = clockDigitStyle,
+            valueDigitStyle = valueDigitStyle,
+            onArrowStyle = { arrowStyle = it; settings.arrowStyle = it },
+            onClockDigitStyle = { clockDigitStyle = it; settings.clockDigitStyle = it },
+            onValueDigitStyle = { valueDigitStyle = it; settings.valueDigitStyle = it },
+            onDismiss = { showCustomization = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomizationSheet(
+    arrowStyle: PixelFont.ArrowStyle,
+    clockDigitStyle: PixelFont.DigitStyle,
+    valueDigitStyle: PixelFont.DigitStyle,
+    onArrowStyle: (PixelFont.ArrowStyle) -> Unit,
+    onClockDigitStyle: (PixelFont.DigitStyle) -> Unit,
+    onValueDigitStyle: (PixelFont.DigitStyle) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(),
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 28.dp)) {
+            SectionLabel("PERSONALIZZAZIONE")
+            Spacer(Modifier.height(6.dp))
+
             // Offer only styles that actually have glyph data drawn in -- an enum entry without
             // a matching glyph set (e.g. added ahead of its artwork) must not be selectable.
             StyleLabel("Frecce")
             StyleRow(
                 options = PixelFont.ArrowStyle.entries.filter { it in PixelFont.arrowSets },
                 selected = arrowStyle,
-                labelOf = { it.label }
-            ) { arrowStyle = it; settings.arrowStyle = it }
+                labelOf = { it.label },
+                onSelect = onArrowStyle
+            )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             StyleLabel("Caratteri orologio")
             StyleRow(
                 options = PixelFont.DigitStyle.entries.filter { it in PixelFont.clockDigitSets },
                 selected = clockDigitStyle,
-                labelOf = { it.label }
-            ) { clockDigitStyle = it; settings.clockDigitStyle = it }
+                labelOf = { it.label },
+                onSelect = onClockDigitStyle
+            )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             StyleLabel("Caratteri valore glicemico")
             StyleRow(
                 options = PixelFont.DigitStyle.entries.filter { it in PixelFont.valueDigitSets },
                 selected = valueDigitStyle,
-                labelOf = { it.label }
-            ) { valueDigitStyle = it; settings.valueDigitStyle = it }
+                labelOf = { it.label },
+                onSelect = onValueDigitStyle
+            )
         }
     }
 }
