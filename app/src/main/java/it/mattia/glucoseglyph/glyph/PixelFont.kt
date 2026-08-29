@@ -8,7 +8,7 @@ import it.mattia.glucoseglyph.model.Trend
  * a glucose-value digit font, a clock digit font, and a set of 5x5 trend-arrow glyphs (plus a
  * fixed "X" for an expired sensor, which isn't part of the style choice). '1' = lit pixel.
  */
-internal object PixelFont {
+object PixelFont {
 
     /** CURRENT is always the designer's latest-confirmed shapes and the default selection.
      * LEGACY/ORIGINAL are kept around purely as alternate looks the designer can switch back to. */
