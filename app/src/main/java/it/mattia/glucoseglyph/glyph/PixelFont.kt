@@ -11,16 +11,17 @@ import it.mattia.glucoseglyph.model.Trend
 object PixelFont {
 
     /** CURRENT is always the designer's latest-confirmed shapes and the default selection.
-     * LEGACY/ORIGINAL are kept around purely as alternate looks the designer can switch back to. */
+     * LEGACY/ORIGINAL are kept around purely as alternate looks the designer can switch back to.
+     * Labels are deliberately neutral, numbered in picker order ("Stile 1" = the default). */
     enum class DigitStyle(val label: String) {
-        CURRENT("Attuale"),
-        LEGACY("Precedente"),
-        ORIGINAL("Originale")
+        CURRENT("Stile 1"),
+        LEGACY("Stile 2"),
+        ORIGINAL("Stile 3")
     }
 
     enum class ArrowStyle(val label: String) {
-        CURRENT("Attuale"),
-        ALTERNATE("Nuovo stile")
+        CURRENT("Stile 1"),
+        ALTERNATE("Stile 2")
     }
 
     /** A digit font plus the column width its glyphs are drawn at (styles vary in both shape and
@@ -167,11 +168,14 @@ object PixelFont {
     // before that fix; ORIGINAL is this app's very first (pre-designer) clock font. A dedicated
     // 1-wide colon glyph (same for every style) sits between HH and MM. ---
     val clockDigitSets: Map<DigitStyle, GlyphSet> = mapOf(
+        // '1' and '2' updated from a later reference photo of the designer's pixel editor
+        // (brightness-probed per cell): '1' moved its flag to the top row, '2' centered its
+        // middle pixel.
         DigitStyle.CURRENT to GlyphSet(
             mapOf(
                 '0' to listOf("111", "101", "101", "111"),
-                '1' to listOf("010", "110", "010", "111"),
-                '2' to listOf("111", "001", "110", "111"),
+                '1' to listOf("110", "010", "010", "111"),
+                '2' to listOf("111", "001", "010", "111"),
                 '3' to listOf("111", "011", "001", "111"),
                 '4' to listOf("101", "101", "111", "001"),
                 '5' to listOf("111", "110", "001", "111"),
