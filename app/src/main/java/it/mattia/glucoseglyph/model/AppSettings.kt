@@ -42,6 +42,9 @@ class AppSettings(context: Context) {
 
     var arrowStyle: PixelFont.ArrowStyle
         get() = readEnum(KEY_ARROW_STYLE, PixelFont.ArrowStyle.entries, PixelFont.ArrowStyle.CURRENT)
+            // A persisted style whose glyph set isn't (or is no longer) drawn in reads back as
+            // CURRENT, so the app never resurrects a selection it can't render.
+            .takeIf { it in PixelFont.arrowSets } ?: PixelFont.ArrowStyle.CURRENT
         set(value) = prefs.edit().putString(KEY_ARROW_STYLE, value.name).apply()
 
     var clockDigitStyle: PixelFont.DigitStyle

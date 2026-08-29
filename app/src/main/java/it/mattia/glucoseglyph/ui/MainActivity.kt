@@ -272,9 +272,11 @@ private fun SettingsScreen(
         Spacer(Modifier.height(14.dp))
         SectionLabel("PERSONALIZZAZIONE")
         SettingsCard {
+            // Offer only styles that actually have glyph data drawn in -- an enum entry without
+            // a matching glyph set (e.g. added ahead of its artwork) must not be selectable.
             StyleLabel("Frecce")
             StyleRow(
-                options = PixelFont.ArrowStyle.entries,
+                options = PixelFont.ArrowStyle.entries.filter { it in PixelFont.arrowSets },
                 selected = arrowStyle,
                 labelOf = { it.label }
             ) { arrowStyle = it; settings.arrowStyle = it }
@@ -282,7 +284,7 @@ private fun SettingsScreen(
             Spacer(Modifier.height(10.dp))
             StyleLabel("Caratteri orologio")
             StyleRow(
-                options = PixelFont.DigitStyle.entries,
+                options = PixelFont.DigitStyle.entries.filter { it in PixelFont.clockDigitSets },
                 selected = clockDigitStyle,
                 labelOf = { it.label }
             ) { clockDigitStyle = it; settings.clockDigitStyle = it }
@@ -290,7 +292,7 @@ private fun SettingsScreen(
             Spacer(Modifier.height(10.dp))
             StyleLabel("Caratteri valore glicemico")
             StyleRow(
-                options = PixelFont.DigitStyle.entries,
+                options = PixelFont.DigitStyle.entries.filter { it in PixelFont.valueDigitSets },
                 selected = valueDigitStyle,
                 labelOf = { it.label }
             ) { valueDigitStyle = it; settings.valueDigitStyle = it }

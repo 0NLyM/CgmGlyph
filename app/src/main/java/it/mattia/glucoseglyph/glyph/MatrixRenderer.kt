@@ -45,8 +45,13 @@ object MatrixRenderer {
         arrowStyle: PixelFont.ArrowStyle = PixelFont.ArrowStyle.CURRENT
     ): IntArray {
         val grid = IntArray(SIZE * SIZE)
-        val valueDigits = PixelFont.valueDigitSets.getValue(valueDigitStyle)
-        val arrows = PixelFont.arrowSets.getValue(arrowStyle)
+        // A stored style with no glyph data behind it (e.g. persisted before that style was
+        // actually drawn in) must degrade to CURRENT, never crash: this renderer runs on app
+        // launch, so throwing here bricks the app until its data is cleared.
+        val valueDigits = PixelFont.valueDigitSets[valueDigitStyle]
+            ?: PixelFont.valueDigitSets.getValue(PixelFont.DigitStyle.CURRENT)
+        val arrows = PixelFont.arrowSets[arrowStyle]
+            ?: PixelFont.arrowSets.getValue(PixelFont.ArrowStyle.CURRENT)
 
         val stale = reading != null && (nowMillis - reading.receivedEpochMillis) > STALE_AFTER_MS
         val brightness = if (reading != null && reading.valid && stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
