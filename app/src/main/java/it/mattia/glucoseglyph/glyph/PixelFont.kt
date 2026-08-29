@@ -21,7 +21,8 @@ object PixelFont {
 
     enum class ArrowStyle(val label: String) {
         CURRENT("Stile 1"),
-        ALTERNATE("Stile 2")
+        ALTERNATE("Stile 2"),
+        OUTLINE("Stile 3")
     }
 
     /** A digit font plus the column width its glyphs are drawn at (styles vary in both shape and
@@ -134,6 +135,24 @@ object PixelFont {
         "00001", "00011", "00111", "01111", "11111"
     )
 
+    // OUTLINE (Stile 3): Claude-designed classic outline arrows -- a shaft with a winged head,
+    // Unicode-arrow style -- approved by the designer from a render.
+    private val outlineFlat = listOf(
+        "00100", "00010", "11111", "00010", "00100"
+    )
+    private val outlineUp = listOf(
+        "00100", "01110", "10101", "00100", "00100"
+    )
+    private val outlineDown = listOf(
+        "00100", "00100", "10101", "01110", "00100"
+    )
+    private val outlineFortyFiveUp = listOf(
+        "00111", "00011", "00101", "01000", "10000"
+    )
+    private val outlineFortyFiveDown = listOf(
+        "10000", "01000", "00101", "00011", "00111"
+    )
+
     val arrowSets: Map<ArrowStyle, Map<Trend, List<String>>> = mapOf(
         ArrowStyle.CURRENT to mapOf(
             Trend.DOUBLE_UP to currentUp,
@@ -154,6 +173,16 @@ object PixelFont {
             Trend.SINGLE_DOWN to altDown,
             Trend.DOUBLE_DOWN to altDown,
             Trend.UNKNOWN to altFlat
+        ),
+        ArrowStyle.OUTLINE to mapOf(
+            Trend.DOUBLE_UP to outlineUp,
+            Trend.SINGLE_UP to outlineUp,
+            Trend.FORTY_FIVE_UP to outlineFortyFiveUp,
+            Trend.FLAT to outlineFlat,
+            Trend.FORTY_FIVE_DOWN to outlineFortyFiveDown,
+            Trend.SINGLE_DOWN to outlineDown,
+            Trend.DOUBLE_DOWN to outlineDown,
+            Trend.UNKNOWN to outlineFlat
         )
     )
     const val ARROW_WIDTH = 5
@@ -186,18 +215,21 @@ object PixelFont {
             ),
             width = 3
         ),
+        // Stile 2: a Claude-designed "rounded" family (diamond zero, open corners where the
+        // shape allows), replacing an earlier faulty transcription the designer retired. The
+        // designer approved this set from a render.
         DigitStyle.LEGACY to GlyphSet(
             mapOf(
-                '0' to listOf("111", "101", "101", "111"),
-                '1' to listOf("010", "110", "010", "111"),
-                '2' to listOf("111", "001", "110", "111"),
-                '3' to listOf("111", "011", "001", "111"),
-                '4' to listOf("101", "101", "111", "001"),
-                '5' to listOf("111", "100", "001", "110"),
-                '6' to listOf("111", "110", "001", "111"),
-                '7' to listOf("111", "100", "111", "111"),
-                '8' to listOf("111", "101", "001", "111"),
-                '9' to listOf("111", "001", "110", "111")
+                '0' to listOf("010", "101", "101", "010"),
+                '1' to listOf("010", "110", "010", "010"),
+                '2' to listOf("110", "001", "010", "111"),
+                '3' to listOf("110", "001", "011", "110"),
+                '4' to listOf("011", "101", "111", "001"),
+                '5' to listOf("111", "100", "011", "110"),
+                '6' to listOf("011", "100", "111", "110"),
+                '7' to listOf("111", "001", "010", "010"),
+                '8' to listOf("110", "101", "111", "011"),
+                '9' to listOf("011", "111", "001", "110")
             ),
             width = 3
         ),
