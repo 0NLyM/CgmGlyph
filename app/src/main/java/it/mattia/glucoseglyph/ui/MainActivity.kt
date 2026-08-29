@@ -53,13 +53,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
+import it.mattia.glucoseglyph.model.Trend
 import it.mattia.glucoseglyph.glyph.MatrixRenderer
 import it.mattia.glucoseglyph.glyph.PixelFont
 import it.mattia.glucoseglyph.net.ControlX2Client
@@ -339,6 +342,7 @@ private fun CustomizationSheet(
                 labelOf = { it.label },
                 onSelect = onArrowStyle
             )
+            StylePreviewRow(glyphs = arrowPreviewGlyphs(arrowStyle))
 
             Spacer(Modifier.height(12.dp))
             StyleLabel("Caratteri orologio")
@@ -348,6 +352,7 @@ private fun CustomizationSheet(
                 labelOf = { it.label },
                 onSelect = onClockDigitStyle
             )
+            StylePreviewRow(glyphs = digitPreviewGlyphs(PixelFont.clockDigitSets, clockDigitStyle))
 
             Spacer(Modifier.height(12.dp))
             StyleLabel("Caratteri valore glicemico")
@@ -357,6 +362,71 @@ private fun CustomizationSheet(
                 labelOf = { it.label },
                 onSelect = onValueDigitStyle
             )
+            StylePreviewRow(glyphs = digitPreviewGlyphs(PixelFont.valueDigitSets, valueDigitStyle))
+        }
+    }
+}
+
+/** Digits 0-9 of the given style, for the preview strip under its picker. */
+private fun digitPreviewGlyphs(
+    sets: Map<PixelFont.DigitStyle, PixelFont.GlyphSet>,
+    style: PixelFont.DigitStyle
+): List<List<String>> {
+    val set = sets[style] ?: sets.getValue(PixelFont.DigitStyle.CURRENT)
+    return ('0'..'9').map { set.glyphs.getValue(it) }
+}
+
+/** The five distinct arrow symbols of the given style (up/down each cover single and double). */
+private fun arrowPreviewGlyphs(style: PixelFont.ArrowStyle): List<List<String>> {
+    val set = PixelFont.arrowSets[style] ?: PixelFont.arrowSets.getValue(PixelFont.ArrowStyle.CURRENT)
+    return listOf(
+        Trend.SINGLE_UP, Trend.FORTY_FIVE_UP, Trend.FLAT, Trend.FORTY_FIVE_DOWN, Trend.SINGLE_DOWN
+    ).map { set.getValue(it) }
+}
+
+/** A one-line strip previewing the selected style's glyphs as warm-white rounded squares on
+ * black, echoing the Glyph Matrix's own cell look (per the designer's request; not the round
+ * dots the main matrix preview uses). */
+@Composable
+private fun StylePreviewRow(glyphs: List<List<String>>) {
+    val rows = glyphs.maxOf { it.size }
+    val widths = glyphs.map { glyph -> glyph.maxOf { it.length } }
+    val totalCols = widths.sum() + (glyphs.size - 1) // 1 blank column between glyphs
+    val cellColor = Color(0xFFFFF8F0)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .background(Color.Black, RoundedCornerShape(4.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .height(30.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cell = minOf(size.height / rows, size.width / totalCols)
+            val square = cell * 0.84f
+            val inset = (cell - square) / 2f
+            val corner = CornerRadius(square * 0.28f)
+            val x0 = (size.width - cell * totalCols) / 2f
+            val y0 = (size.height - cell * rows) / 2f
+            var colCursor = 0
+            glyphs.forEachIndexed { i, glyph ->
+                glyph.forEachIndexed { r, line ->
+                    line.forEachIndexed { c, ch ->
+                        if (ch == '1') {
+                            drawRoundRect(
+                                color = cellColor,
+                                topLeft = Offset(
+                                    x = x0 + (colCursor + c) * cell + inset,
+                                    y = y0 + r * cell + inset
+                                ),
+                                size = Size(square, square),
+                                cornerRadius = corner
+                            )
+                        }
+                    }
+                }
+                colCursor += widths[i] + 1
+            }
         }
     }
 }
