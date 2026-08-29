@@ -2,6 +2,7 @@ package it.mattia.glucoseglyph.model
 
 import android.content.Context
 import android.content.SharedPreferences
+import it.mattia.glucoseglyph.glyph.PixelFont
 
 /** Thin wrapper around SharedPreferences holding connection + display settings and the last reading. */
 class AppSettings(context: Context) {
@@ -36,6 +37,23 @@ class AppSettings(context: Context) {
     var serviceEnabled: Boolean
         get() = prefs.getBoolean(KEY_SERVICE_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_SERVICE_ENABLED, value).apply()
+
+    // --- Personalizzazione: which glyph style to draw with, per element ---
+
+    var arrowStyle: PixelFont.ArrowStyle
+        get() = readEnum(KEY_ARROW_STYLE, PixelFont.ArrowStyle.entries, PixelFont.ArrowStyle.CURRENT)
+        set(value) = prefs.edit().putString(KEY_ARROW_STYLE, value.name).apply()
+
+    var clockDigitStyle: PixelFont.DigitStyle
+        get() = readEnum(KEY_CLOCK_DIGIT_STYLE, PixelFont.DigitStyle.entries, PixelFont.DigitStyle.CURRENT)
+        set(value) = prefs.edit().putString(KEY_CLOCK_DIGIT_STYLE, value.name).apply()
+
+    var valueDigitStyle: PixelFont.DigitStyle
+        get() = readEnum(KEY_VALUE_DIGIT_STYLE, PixelFont.DigitStyle.entries, PixelFont.DigitStyle.CURRENT)
+        set(value) = prefs.edit().putString(KEY_VALUE_DIGIT_STYLE, value.name).apply()
+
+    private fun <T : Enum<T>> readEnum(key: String, values: List<T>, default: T): T =
+        prefs.getString(key, null)?.let { saved -> values.find { it.name == saved } } ?: default
 
     // --- Latest reading cache, so the Glyph Toy can draw instantly on bind ---
 
@@ -75,6 +93,9 @@ class AppSettings(context: Context) {
         private const val KEY_POLL_INTERVAL = "poll_interval_seconds"
         private const val KEY_USE_MMOL = "use_mmol"
         private const val KEY_SERVICE_ENABLED = "service_enabled"
+        private const val KEY_ARROW_STYLE = "arrow_style"
+        private const val KEY_CLOCK_DIGIT_STYLE = "clock_digit_style"
+        private const val KEY_VALUE_DIGIT_STYLE = "value_digit_style"
         const val KEY_LAST_MGDL = "last_mgdl"
         private const val KEY_LAST_TREND = "last_trend_rate"
         private const val KEY_LAST_READING_MILLIS = "last_reading_millis"

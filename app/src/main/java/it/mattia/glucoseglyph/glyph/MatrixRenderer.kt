@@ -39,23 +39,28 @@ object MatrixRenderer {
         useMmol: Boolean,
         nowMillis: Long = System.currentTimeMillis(),
         batteryPercent: Int? = null,
-        includeStatusRows: Boolean = false
+        includeStatusRows: Boolean = false,
+        valueDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
+        clockDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
+        arrowStyle: PixelFont.ArrowStyle = PixelFont.ArrowStyle.CURRENT
     ): IntArray {
         val grid = IntArray(SIZE * SIZE)
+        val valueDigits = PixelFont.valueDigitSets.getValue(valueDigitStyle)
+        val arrows = PixelFont.arrowSets.getValue(arrowStyle)
 
         val stale = reading != null && (nowMillis - reading.receivedEpochMillis) > STALE_AFTER_MS
         val brightness = if (reading != null && reading.valid && stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
 
         if (includeStatusRows) {
             if (batteryPercent != null) drawBatteryRing(grid, batteryPercent, brightness)
-            drawClock(grid, nowMillis, brightness)
+            drawClock(grid, nowMillis, brightness, PixelFont.clockDigitSets.getValue(clockDigitStyle))
         }
 
         when {
-            reading == null -> drawPlaceholder(grid, "---", brightness)
-            !reading.valid -> drawPlaceholder(grid, "n/a", brightness)
-            useMmol -> drawMmol(grid, reading.mmol(), reading.trend, reading.sensorExpired, brightness)
-            else -> drawMgdl(grid, reading.mgdl, reading.trend, reading.sensorExpired, brightness)
+            reading == null -> drawPlaceholder(grid, "---", brightness, valueDigits)
+            !reading.valid -> drawPlaceholder(grid, "n/a", brightness, valueDigits)
+            useMmol -> drawMmol(grid, reading.mmol(), reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
+            else -> drawMgdl(grid, reading.mgdl, reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
         }
         return grid
     }
@@ -103,36 +108,40 @@ object MatrixRenderer {
         }
     }
 
-    private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int) {
+    private fun drawClock(grid: IntArray, nowMillis: Long, brightness: Int, clockDigits: PixelFont.GlyphSet) {
         val time = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault()).toLocalTime()
         // "HH:MM" with a dedicated 1px-wide colon glyph between hour and minute; every character
         // (digit or colon) is separated from its neighbour by a uniform 1px gap.
         val text = "%02d:%02d".format(time.hour, time.minute)
-        fun widthOf(c: Char) = if (c == ':') PixelFont.STATUS_COLON_WIDTH else PixelFont.STATUS_DIGIT_WIDTH
+        fun widthOf(c: Char) = if (c == ':') PixelFont.STATUS_COLON_WIDTH else clockDigits.width
         val totalWidth = text.sumOf { widthOf(it) } + (text.length - 1)
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            val glyph = if (c == ':') PixelFont.statusColon else PixelFont.statusDigits.getValue(c)
+            val glyph = if (c == ':') PixelFont.statusColon else clockDigits.glyphs.getValue(c)
             drawGlyph(grid, glyph, x, CLOCK_Y, brightness)
             x += widthOf(c) + 1
         }
     }
 
-    private fun drawPlaceholder(grid: IntArray, text: String, brightness: Int) {
-        val totalWidth = text.length * PixelFont.DIGIT_WIDTH + (text.length - 1)
+    private fun drawPlaceholder(grid: IntArray, text: String, brightness: Int, valueDigits: PixelFont.GlyphSet) {
+        val totalWidth = text.length * valueDigits.width + (text.length - 1)
         var x = centeredStart(totalWidth, SIZE)
         for (c in text) {
-            drawGlyph(grid, PixelFont.digits.getValue(c), x, VALUE_Y, brightness)
-            x += PixelFont.DIGIT_WIDTH + 1
+            drawGlyph(grid, valueDigits.glyphs.getValue(c), x, VALUE_Y, brightness)
+            x += valueDigits.width + 1
         }
     }
 
-    private fun drawMgdl(grid: IntArray, mgdl: Int, trend: Trend, sensorExpired: Boolean, brightness: Int) {
-        drawValueAndArrow(grid, mgdl.coerceIn(0, 999).toString(), trend, sensorExpired, brightness)
+    private fun drawMgdl(
+        grid: IntArray, mgdl: Int, trend: Trend, sensorExpired: Boolean, brightness: Int,
+        valueDigits: PixelFont.GlyphSet, arrows: Map<Trend, List<String>>
+    ) {
+        drawValueAndArrow(grid, mgdl.coerceIn(0, 999).toString(), trend, sensorExpired, brightness, valueDigits, arrows)
     }
 
     private fun drawMmol(
-        grid: IntArray, mmol: Double, trend: Trend, sensorExpired: Boolean, brightness: Int
+        grid: IntArray, mmol: Double, trend: Trend, sensorExpired: Boolean, brightness: Int,
+        valueDigits: PixelFont.GlyphSet, arrows: Map<Trend, List<String>>
     ) {
         // Below 10 mmol/L there's room for a decimal place next to the arrow; at/above it,
         // drop the decimal so "value + arrow" still fits on the same row as mg/dL does.
@@ -141,18 +150,19 @@ object MatrixRenderer {
         } else {
             mmol.roundToInt().coerceAtMost(99).toString()
         }
-        drawValueAndArrow(grid, text, trend, sensorExpired, brightness)
+        drawValueAndArrow(grid, text, trend, sensorExpired, brightness, valueDigits, arrows)
     }
 
     /** Draws "value + arrow" as a single block centered as a unit on the matrix, so the pair
      * stays visually centered regardless of how many digits the value has. When the pump reports
      * the CGM sensor as expired, an "X" takes the trend arrow's place instead. */
     private fun drawValueAndArrow(
-        grid: IntArray, text: String, trend: Trend, sensorExpired: Boolean, brightness: Int
+        grid: IntArray, text: String, trend: Trend, sensorExpired: Boolean, brightness: Int,
+        valueDigits: PixelFont.GlyphSet, arrows: Map<Trend, List<String>>
     ) {
         var totalWidth = 0
         for (c in text) {
-            totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else PixelFont.DIGIT_WIDTH) + 1
+            totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else valueDigits.width) + 1
         }
         totalWidth += PixelFont.ARROW_WIDTH
         var x = centeredStart(totalWidth, SIZE)
@@ -162,12 +172,12 @@ object MatrixRenderer {
                 drawGlyph(grid, PixelFont.dot, x, VALUE_Y, brightness)
                 x += PixelFont.DOT_WIDTH + 1
             } else {
-                drawGlyph(grid, PixelFont.digits.getValue(c), x, VALUE_Y, brightness)
-                x += PixelFont.DIGIT_WIDTH + 1
+                drawGlyph(grid, valueDigits.glyphs.getValue(c), x, VALUE_Y, brightness)
+                x += valueDigits.width + 1
             }
         }
 
-        val arrowGlyph = if (sensorExpired) PixelFont.expiredSensor else PixelFont.arrows.getValue(trend)
+        val arrowGlyph = if (sensorExpired) PixelFont.expiredSensor else arrows.getValue(trend)
         drawGlyph(grid, arrowGlyph, x, ARROW_Y, brightness)
     }
 

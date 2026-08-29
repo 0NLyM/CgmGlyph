@@ -57,7 +57,10 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
             reading = GlucoseState.current,
             useMmol = settings.useMmol,
             batteryPercent = currentBatteryPercent(applicationContext),
-            includeStatusRows = true
+            includeStatusRows = true,
+            valueDigitStyle = settings.valueDigitStyle,
+            clockDigitStyle = settings.clockDigitStyle,
+            arrowStyle = settings.arrowStyle
         )
         try {
             manager.setMatrixFrame(frame)

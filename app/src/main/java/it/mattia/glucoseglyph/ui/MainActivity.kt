@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
 import it.mattia.glucoseglyph.glyph.MatrixRenderer
+import it.mattia.glucoseglyph.glyph.PixelFont
 import it.mattia.glucoseglyph.net.ControlX2Client
 import it.mattia.glucoseglyph.service.GlucosePollingService
 import it.mattia.glucoseglyph.ui.theme.GlucoseGlyphTheme
@@ -122,6 +123,9 @@ private fun SettingsScreen(
     var pollInterval by remember { mutableStateOf(settings.pollIntervalSeconds.toString()) }
     var useMmol by remember { mutableStateOf(settings.useMmol) }
     var serviceOn by remember { mutableStateOf(settings.serviceEnabled) }
+    var arrowStyle by remember { mutableStateOf(settings.arrowStyle) }
+    var clockDigitStyle by remember { mutableStateOf(settings.clockDigitStyle) }
+    var valueDigitStyle by remember { mutableStateOf(settings.valueDigitStyle) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -164,7 +168,14 @@ private fun SettingsScreen(
         Spacer(Modifier.height(10.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MatrixPreview(reading = GlucoseState.current, useMmol = useMmol, tick = tick)
+            MatrixPreview(
+                reading = GlucoseState.current,
+                useMmol = useMmol,
+                tick = tick,
+                arrowStyle = arrowStyle,
+                clockDigitStyle = clockDigitStyle,
+                valueDigitStyle = valueDigitStyle
+            )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 UnitChip("mg/dL", selected = !useMmol) { useMmol = false; settings.useMmol = false }
@@ -257,6 +268,57 @@ private fun SettingsScreen(
             style = MaterialTheme.typography.labelSmall,
             color = NothingGrey
         )
+
+        Spacer(Modifier.height(14.dp))
+        SectionLabel("PERSONALIZZAZIONE")
+        SettingsCard {
+            StyleLabel("Frecce")
+            StyleRow(
+                options = PixelFont.ArrowStyle.entries,
+                selected = arrowStyle,
+                labelOf = { it.label }
+            ) { arrowStyle = it; settings.arrowStyle = it }
+
+            Spacer(Modifier.height(10.dp))
+            StyleLabel("Caratteri orologio")
+            StyleRow(
+                options = PixelFont.DigitStyle.entries,
+                selected = clockDigitStyle,
+                labelOf = { it.label }
+            ) { clockDigitStyle = it; settings.clockDigitStyle = it }
+
+            Spacer(Modifier.height(10.dp))
+            StyleLabel("Caratteri valore glicemico")
+            StyleRow(
+                options = PixelFont.DigitStyle.entries,
+                selected = valueDigitStyle,
+                labelOf = { it.label }
+            ) { valueDigitStyle = it; settings.valueDigitStyle = it }
+        }
+    }
+}
+
+@Composable
+private fun StyleLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = NothingGrey,
+        modifier = Modifier.padding(bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun <T> StyleRow(
+    options: List<T>,
+    selected: T,
+    labelOf: (T) -> String,
+    onSelect: (T) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        options.forEach { option ->
+            UnitChip(labelOf(option), selected = option == selected) { onSelect(option) }
+        }
     }
 }
 
@@ -352,12 +414,20 @@ private fun formatAge(seconds: Long): String = when {
 private fun MatrixPreview(
     reading: it.mattia.glucoseglyph.model.GlucoseReading?,
     useMmol: Boolean,
-    tick: Long
+    tick: Long,
+    arrowStyle: PixelFont.ArrowStyle,
+    clockDigitStyle: PixelFont.DigitStyle,
+    valueDigitStyle: PixelFont.DigitStyle
 ) {
     // Clock/battery are drawn only on the physical Glyph Matrix (GlucoseToyService); this
     // preview intentionally mirrors just the glucose reading itself.
-    val grid = remember(reading, useMmol, tick) {
-        MatrixRenderer.render(reading, useMmol)
+    val grid = remember(reading, useMmol, tick, arrowStyle, clockDigitStyle, valueDigitStyle) {
+        MatrixRenderer.render(
+            reading, useMmol,
+            valueDigitStyle = valueDigitStyle,
+            clockDigitStyle = clockDigitStyle,
+            arrowStyle = arrowStyle
+        )
     }
     Box(
         modifier = Modifier
