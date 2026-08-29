@@ -69,21 +69,21 @@ internal object PixelFont {
     )
     const val ARROW_WIDTH = 5
 
-    // 3 wide x 4 tall, re-transcribed pixel-for-pixel from a clear photo of the designer's own
-    // pixel-editor tool (1-4 and 6-9,0 cross-checked against multiple crops of that photo; '5'
-    // wasn't in that photo so it keeps its earlier designer-confirmed shape; '9' is confirmed as
-    // '6' flipped vertically). A dedicated 1-wide colon glyph sits between HH and MM.
+    // 3 wide x 4 tall, transcribed pixel-for-pixel from a clear photo of the designer's own
+    // pixel-editor tool: digits 1-4 from its top row, 5-9-0 from its bottom row (all six
+    // characters located via automated per-cell brightness analysis of the photo, cross-checked
+    // against direct visual reading). A dedicated 1-wide colon glyph sits between HH and MM.
     val statusDigits: Map<Char, List<String>> = mapOf(
         '0' to listOf("111", "101", "101", "111"),
         '1' to listOf("010", "110", "010", "111"),
         '2' to listOf("111", "001", "110", "111"),
         '3' to listOf("111", "011", "001", "111"),
         '4' to listOf("101", "101", "111", "001"),
-        '5' to listOf("111", "100", "001", "110"),
-        '6' to listOf("111", "110", "001", "111"),
-        '7' to listOf("111", "100", "111", "111"),
-        '8' to listOf("111", "101", "001", "111"),
-        '9' to listOf("111", "001", "110", "111")
+        '5' to listOf("111", "110", "001", "111"),
+        '6' to listOf("111", "100", "111", "111"),
+        '7' to listOf("111", "001", "001", "001"),
+        '8' to listOf("111", "101", "111", "111"),
+        '9' to listOf("111", "111", "001", "111")
     )
     const val STATUS_DIGIT_WIDTH = 3
 
