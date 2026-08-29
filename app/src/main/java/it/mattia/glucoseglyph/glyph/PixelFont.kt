@@ -55,8 +55,8 @@ object PixelFont {
         ),
         DigitStyle.LEGACY to GlyphSet(
             mapOf(
-                '0' to listOf("111", "101", "101", "101", "101", "101", "111"),
-                // '1' redrawn by the designer in their pixel editor (screenshot-extracted).
+                // '0' and '1' redrawn by the designer in their pixel editor (screenshot-extracted).
+                '0' to listOf("110", "101", "101", "101", "101", "101", "011"),
                 '1' to listOf("110", "010", "010", "010", "010", "010", "111"),
                 '2' to listOf("110", "001", "001", "010", "100", "100", "111"),
                 '3' to listOf("110", "001", "001", "110", "001", "001", "111"),
