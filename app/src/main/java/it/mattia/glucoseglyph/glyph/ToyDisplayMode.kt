@@ -6,7 +6,7 @@ package it.mattia.glucoseglyph.glyph
  * whenever the toy is (re)bound, so the primary reading is what you see by default.
  */
 enum class ToyDisplayMode {
-    GLUCOSE, PUMP_BATTERY, RESERVOIR;
+    GLUCOSE, PUMP_BATTERY, RESERVOIR, SENSOR_DAYS;
 
     fun next(): ToyDisplayMode = entries[(ordinal + 1) % entries.size]
 }

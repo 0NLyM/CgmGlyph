@@ -52,7 +52,9 @@ object PixelFont {
                 '9' to listOf("0110", "1001", "1001", "0111", "0001", "0001", "0110"),
                 '-' to listOf("0000", "0000", "0000", "1111", "0000", "0000", "0000"),
                 'n' to listOf("0000", "0000", "1100", "1010", "1010", "1010", "1010"),
-                'a' to listOf("0000", "0000", "0110", "1010", "0110", "1010", "0110"),
+                // 'a' redrawn by the designer in their pixel editor (screenshot-extracted, a 3x5
+                // shape right-padded into this style's 4-wide box like 'n' already is).
+                'a' to listOf("0000", "0000", "1100", "0011", "0111", "1011", "1111"),
                 '/' to listOf("0001", "0001", "0010", "0010", "0100", "0100", "1000")
             ),
             width = 4
@@ -230,6 +232,9 @@ object PixelFont {
     )
     val reservoirIcon = listOf(
         "00100", "01110", "11111", "11111", "01110"
+    )
+    val sensorDaysIcon = listOf(
+        "11111", "01010", "00100", "01010", "11111"
     )
 
     // --- Clock digit font: CURRENT is today's pixel-perfect re-transcription (photo-verified,

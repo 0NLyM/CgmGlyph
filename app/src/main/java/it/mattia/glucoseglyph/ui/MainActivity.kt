@@ -130,6 +130,7 @@ private fun SettingsScreen(
     var arrowStyle by remember { mutableStateOf(settings.arrowStyle) }
     var clockDigitStyle by remember { mutableStateOf(settings.clockDigitStyle) }
     var valueDigitStyle by remember { mutableStateOf(settings.valueDigitStyle) }
+    var sensorDurationDays by remember { mutableStateOf(settings.sensorDurationDays) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
     var showCustomization by remember { mutableStateOf(false) }
@@ -305,9 +306,11 @@ private fun SettingsScreen(
             arrowStyle = arrowStyle,
             clockDigitStyle = clockDigitStyle,
             valueDigitStyle = valueDigitStyle,
+            sensorDurationDays = sensorDurationDays,
             onArrowStyle = { arrowStyle = it; settings.arrowStyle = it },
             onClockDigitStyle = { clockDigitStyle = it; settings.clockDigitStyle = it },
             onValueDigitStyle = { valueDigitStyle = it; settings.valueDigitStyle = it },
+            onSensorDurationDays = { sensorDurationDays = it; settings.sensorDurationDays = it },
             onDismiss = { showCustomization = false }
         )
     }
@@ -319,9 +322,11 @@ private fun CustomizationSheet(
     arrowStyle: PixelFont.ArrowStyle,
     clockDigitStyle: PixelFont.DigitStyle,
     valueDigitStyle: PixelFont.DigitStyle,
+    sensorDurationDays: Int,
     onArrowStyle: (PixelFont.ArrowStyle) -> Unit,
     onClockDigitStyle: (PixelFont.DigitStyle) -> Unit,
     onValueDigitStyle: (PixelFont.DigitStyle) -> Unit,
+    onSensorDurationDays: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -363,9 +368,22 @@ private fun CustomizationSheet(
                 onSelect = onValueDigitStyle
             )
             StylePreviewRow(glyphs = digitPreviewGlyphs(PixelFont.valueDigitSets, valueDigitStyle))
+
+            Spacer(Modifier.height(12.dp))
+            StyleLabel("Durata sensore (per i giorni alla scadenza)")
+            StyleRow(
+                options = SENSOR_DURATION_OPTIONS,
+                selected = sensorDurationDays,
+                labelOf = { "$it gg" },
+                onSelect = onSensorDurationDays
+            )
         }
     }
 }
+
+// ControlX2/the pump don't report a CGM sensor's total lifespan, only when its session started,
+// so the user picks the closest match for their own sensor here -- common Dexcom/Libre lifespans.
+private val SENSOR_DURATION_OPTIONS = listOf(7, 10, 14, 15, 21)
 
 /** Digits 0-9 of the given style, for the preview strip under its picker. */
 private fun digitPreviewGlyphs(

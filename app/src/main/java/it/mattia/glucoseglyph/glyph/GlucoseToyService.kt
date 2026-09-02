@@ -8,6 +8,8 @@ import com.nothing.ketchum.GlyphMatrixManager
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.GlucoseState
 import it.mattia.glucoseglyph.model.currentBatteryPercent
+import it.mattia.glucoseglyph.net.ControlX2Client
+import kotlin.concurrent.thread
 
 /**
  * The Glyph Toy shown in the Phone (3)'s Glyph Toys carousel / AOD. Draws whatever
@@ -16,10 +18,16 @@ import it.mattia.glucoseglyph.model.currentBatteryPercent
  * while on the always-on display (EVENT_AOD), and every 30s while actively shown so the clock
  * doesn't go stale between glucose polls.
  *
- * Long-pressing the toy toggles between mg/dL and mmol/L, matching the long-press "cycle"
- * convention used by other Glyph Toys. A plain press of the Glyph button, or shaking the phone,
- * instead cycles [ToyDisplayMode] -- glucose (default) -> pump battery -> reservoir units and
- * back -- always starting back at glucose whenever the toy is (re)bound.
+ * The Glyph button on the back of the phone (or shaking the phone) drives several gestures:
+ *  - a short press cycles [ToyDisplayMode] -- glucose (default) -> pump battery -> reservoir
+ *    units -> sensor days remaining and back -- always starting at glucose whenever the toy is
+ *    (re)bound;
+ *  - a long press (the SDK's own long-press threshold) toggles mg/dL<->mmol/L, matching the
+ *    long-press "cycle" convention used by other Glyph Toys;
+ *  - holding it well past that plays a small heartbeat easter egg, then returns to whatever was
+ *    showing before;
+ *  - a double tap forces an immediate re-poll of ControlX2 (instead of waiting for the next
+ *    scheduled poll), redrawing in place on whichever display mode was already showing.
  */
 class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
 
@@ -34,11 +42,19 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     }
     private val shakeDetector by lazy { ShakeDetector(this) { cycleDisplayMode() } }
     private var displayMode = ToyDisplayMode.GLUCOSE
+
     // EVENT_ACTION_DOWN always fires first, even for what turns into a long press, so a plain
     // "cycle on press" would also fire on every long-press-to-toggle-units gesture. Only cycling
     // on release, and only when no long-press was reported in between, tells a short tap apart
     // from a long hold using the SDK's own event order instead of guessing at a timing threshold.
     private var longPressHandled = false
+    // A short tap's own action (cycling the display mode) is held back briefly in case a second
+    // tap arrives within the double-tap window, in which case it's cancelled in favour of a
+    // refresh -- so a double tap never also cycles the mode as a side effect of its first tap.
+    private val singleTapRunnable = Runnable { cycleDisplayMode() }
+    private var lastShortReleaseMillis = 0L
+    private val easterEggRunnable = Runnable { playEasterEgg() }
+    private var easterEggPlaying = false
 
     override fun performOnServiceConnected(context: Context, glyphMatrixManager: GlyphMatrixManager) {
         displayMode = ToyDisplayMode.GLUCOSE
@@ -51,6 +67,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     override fun performOnServiceDisconnected(context: Context) {
         GlucoseState.removeListener(onReadingChanged)
         tickHandler.removeCallbacks(tickRunnable)
+        tickHandler.removeCallbacks(singleTapRunnable)
+        tickHandler.removeCallbacks(easterEggRunnable)
         shakeDetector.stop()
     }
 
@@ -60,6 +78,7 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
 
     override fun onTouchPointPressed() {
         longPressHandled = false
+        tickHandler.postDelayed(easterEggRunnable, EASTER_EGG_HOLD_MS)
     }
 
     override fun onTouchPointLongPress() {
@@ -69,7 +88,19 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     }
 
     override fun onTouchPointReleased() {
-        if (!longPressHandled) cycleDisplayMode()
+        tickHandler.removeCallbacks(easterEggRunnable)
+        if (longPressHandled || easterEggPlaying) return
+
+        val now = System.currentTimeMillis()
+        if (now - lastShortReleaseMillis < DOUBLE_TAP_WINDOW_MS) {
+            // Second tap of a double tap: the pending single-tap cycle never happened, refresh instead.
+            tickHandler.removeCallbacks(singleTapRunnable)
+            lastShortReleaseMillis = 0L
+            refreshNow()
+        } else {
+            lastShortReleaseMillis = now
+            tickHandler.postDelayed(singleTapRunnable, DOUBLE_TAP_WINDOW_MS)
+        }
     }
 
     private fun cycleDisplayMode() {
@@ -77,8 +108,47 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
         redraw()
     }
 
+    /** Re-polls ControlX2 immediately instead of waiting for GlucosePollingService's own
+     * schedule, redrawing on whichever display mode was already showing. Mirrors
+     * GlucosePollingService.pollOnce's success/failure handling; GlucoseState.update already
+     * notifies this service's own listener, which is what actually triggers the redraw. */
+    private fun refreshNow() {
+        thread(name = "toy-refresh") {
+            val client = ControlX2Client(
+                host = settings.host,
+                port = settings.port,
+                username = settings.username,
+                password = settings.password
+            )
+            when (val result = client.fetchLatestReading()) {
+                is ControlX2Client.FetchResult.Success -> {
+                    GlucoseState.update(result.reading)
+                    settings.lastMgdl = result.reading.mgdl
+                    settings.lastReadingEpochMillis = result.reading.readingEpochMillis
+                    settings.lastFetchOk = true
+                    settings.lastError = null
+                }
+                is ControlX2Client.FetchResult.Failure -> {
+                    GlucoseState.updateError(result.message)
+                    settings.lastFetchOk = false
+                    settings.lastError = result.message
+                }
+            }
+        }
+    }
+
+    private fun playEasterEgg() {
+        val manager = glyphMatrixManager ?: return
+        easterEggPlaying = true
+        HeartbeatEasterEgg.play(manager, tickHandler) {
+            easterEggPlaying = false
+            redraw()
+        }
+    }
+
     private fun redraw() {
         val manager = glyphMatrixManager ?: return
+        if (easterEggPlaying) return
         val frame = MatrixRenderer.render(
             reading = GlucoseState.current,
             useMmol = settings.useMmol,
@@ -87,7 +157,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
             valueDigitStyle = settings.valueDigitStyle,
             clockDigitStyle = settings.clockDigitStyle,
             arrowStyle = settings.arrowStyle,
-            displayMode = displayMode
+            displayMode = displayMode,
+            sensorDurationDays = settings.sensorDurationDays
         )
         try {
             manager.setMatrixFrame(frame)
@@ -99,5 +170,10 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     private companion object {
         const val TAG = "GlucoseToyService"
         const val CLOCK_TICK_MS = 30_000L
+        const val DOUBLE_TAP_WINDOW_MS = 300L
+        // Comfortably past the SDK's own long-press threshold (which already fires
+        // onTouchPointLongPress well before this) so a plain unit-toggle long-press never also
+        // triggers the easter egg.
+        const val EASTER_EGG_HOLD_MS = 2500L
     }
 }

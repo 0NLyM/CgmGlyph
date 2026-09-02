@@ -55,6 +55,13 @@ class AppSettings(context: Context) {
         get() = readEnum(KEY_VALUE_DIGIT_STYLE, PixelFont.DigitStyle.entries, PixelFont.DigitStyle.CURRENT)
         set(value) = prefs.edit().putString(KEY_VALUE_DIGIT_STYLE, value.name).apply()
 
+    // The pump doesn't report a CGM sensor's total lifespan over the debug API, only when its
+    // current session started -- so "days remaining" (one of the Glyph Toy's cycled display
+    // modes) needs this to be told to it explicitly, picked from the Personalizzazione sheet.
+    var sensorDurationDays: Int
+        get() = prefs.getInt(KEY_SENSOR_DURATION_DAYS, 10)
+        set(value) = prefs.edit().putInt(KEY_SENSOR_DURATION_DAYS, value).apply()
+
     private fun <T : Enum<T>> readEnum(key: String, values: List<T>, default: T): T =
         prefs.getString(key, null)?.let { saved -> values.find { it.name == saved } } ?: default
 
@@ -99,6 +106,7 @@ class AppSettings(context: Context) {
         private const val KEY_ARROW_STYLE = "arrow_style"
         private const val KEY_CLOCK_DIGIT_STYLE = "clock_digit_style"
         private const val KEY_VALUE_DIGIT_STYLE = "value_digit_style"
+        private const val KEY_SENSOR_DURATION_DAYS = "sensor_duration_days"
         const val KEY_LAST_MGDL = "last_mgdl"
         private const val KEY_LAST_TREND = "last_trend_rate"
         private const val KEY_LAST_READING_MILLIS = "last_reading_millis"

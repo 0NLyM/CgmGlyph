@@ -67,9 +67,12 @@ class ControlX2Client(
      *    pump's own displayed battery percent.
      *  - opCode 36 (InsulinStatusRequest)      -> InsulinStatusResponse: currentInsulinAmount, the
      *    reservoir/cartridge units remaining.
-     * All four use the CURRENT_STATUS characteristic. The battery/reservoir messages are optional
-     * extras -- a missing or malformed reply for either just leaves that field null, it never
-     * fails the whole reading (only a missing EGV does that).
+     *  - opCode 80 (CGMStatusRequest)          -> CGMStatusResponse: sensorStartedTimestamp, when
+     *    the current CGM sensor session began (the pump doesn't report its total lifespan, so
+     *    "days remaining" is computed from this plus the user-configured sensor duration).
+     * All five use the CURRENT_STATUS characteristic. The battery/reservoir/sensor-start messages
+     * are optional extras -- a missing or malformed reply for any of them just leaves that field
+     * null, it never fails the whole reading (only a missing EGV does that).
      */
     fun fetchLatestReading(): FetchResult {
         val body = JSONArray()
@@ -77,6 +80,7 @@ class ControlX2Client(
             .put(JSONObject().put("cargo", "").put("opCode", 56).put("characteristic", "CURRENT_STATUS"))
             .put(JSONObject().put("cargo", "").put("opCode", 52).put("characteristic", "CURRENT_STATUS"))
             .put(JSONObject().put("cargo", "").put("opCode", 36).put("characteristic", "CURRENT_STATUS"))
+            .put(JSONObject().put("cargo", "").put("opCode", 80).put("characteristic", "CURRENT_STATUS"))
             .toString().toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
@@ -111,6 +115,7 @@ class ControlX2Client(
         var homeScreenAlertIconId: Int? = null
         var pumpBatteryPercent: Int? = null
         var reservoirUnits: Int? = null
+        var sensorStartedEpochMillis: Long? = null
         for (i in 0 until array.length()) {
             val message = array.optJSONObject(i) ?: continue
             val name = message.optString("name")
@@ -127,6 +132,10 @@ class ControlX2Client(
                     pumpBatteryPercent = params.optInt("currentBatteryIbc", -1).takeIf { it in 0..100 }
                 name.endsWith("InsulinStatusResponse") ->
                     reservoirUnits = params.optInt("currentInsulinAmount", -1).takeIf { it >= 0 }
+                name.endsWith("CGMStatusResponse") ->
+                    sensorStartedEpochMillis = params.optLong("sensorStartedTimestamp", -1L)
+                        .takeIf { it > 0 }
+                        ?.let { (it + PUMP_EPOCH_OFFSET_SECONDS) * 1000L }
             }
         }
 

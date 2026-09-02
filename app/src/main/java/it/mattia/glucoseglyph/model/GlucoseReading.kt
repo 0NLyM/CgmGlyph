@@ -63,7 +63,12 @@ data class GlucoseReading(
     val pumpBatteryPercent: Int? = null,
     /** Insulin units remaining in the pump's reservoir/cartridge
      * (InsulinStatusResponse.currentInsulinAmount), or null if unavailable. */
-    val reservoirUnits: Int? = null
+    val reservoirUnits: Int? = null,
+    /** Real-world Unix epoch millis of CGMStatusResponse.sensorStartedTimestamp -- when the
+     * current CGM sensor session began, or null if unavailable. The pump doesn't report the
+     * sensor's total lifespan itself, so "days remaining" is computed from this plus the
+     * user-configured AppSettings.sensorDurationDays. */
+    val sensorStartedEpochMillis: Long? = null
 ) {
     fun mmol(): Double = mgdl / 18.0182
 }

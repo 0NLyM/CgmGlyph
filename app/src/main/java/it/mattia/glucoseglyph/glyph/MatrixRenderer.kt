@@ -43,7 +43,8 @@ object MatrixRenderer {
         valueDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
         clockDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
         arrowStyle: PixelFont.ArrowStyle = PixelFont.ArrowStyle.CURRENT,
-        displayMode: ToyDisplayMode = ToyDisplayMode.GLUCOSE
+        displayMode: ToyDisplayMode = ToyDisplayMode.GLUCOSE,
+        sensorDurationDays: Int = 10
     ): IntArray {
         val grid = IntArray(SIZE * SIZE)
         // A stored style with no glyph data behind it (e.g. persisted before that style was
@@ -72,6 +73,8 @@ object MatrixRenderer {
                 drawValueAndIcon(grid, reading?.pumpBatteryPercent?.toString() ?: "--", PixelFont.batteryIcon, brightness, valueDigits)
             ToyDisplayMode.RESERVOIR ->
                 drawValueAndIcon(grid, reading?.reservoirUnits?.toString() ?: "--", PixelFont.reservoirIcon, brightness, valueDigits)
+            ToyDisplayMode.SENSOR_DAYS ->
+                drawValueAndIcon(grid, sensorDaysRemaining(reading, nowMillis, sensorDurationDays)?.toString() ?: "--", PixelFont.sensorDaysIcon, brightness, valueDigits)
             ToyDisplayMode.GLUCOSE -> when {
                 reading == null -> drawPlaceholder(grid, "---", brightness, valueDigits)
                 !reading.valid -> drawPlaceholder(grid, "n/a", brightness, valueDigits)
@@ -206,6 +209,21 @@ object MatrixRenderer {
 
         drawGlyph(grid, icon, x, ARROW_Y, brightness)
     }
+
+    /** Days left in the current CGM sensor session, rounded up so it still reads "1" on the
+     * expiration day itself rather than dropping straight to "0". The pump doesn't report a
+     * sensor's total lifespan, only when its session started, so [sensorDurationDays] (the
+     * Personalizzazione sheet's own setting) stands in for it. */
+    private fun sensorDaysRemaining(reading: GlucoseReading?, nowMillis: Long, sensorDurationDays: Int): Int? {
+        val startedAt = reading?.sensorStartedEpochMillis ?: return null
+        val elapsedMillis = nowMillis - startedAt
+        val totalMillis = sensorDurationDays * 24 * 60 * 60 * 1000L
+        val remainingMillis = totalMillis - elapsedMillis
+        if (remainingMillis <= 0) return 0
+        return ((remainingMillis + DAY_MILLIS - 1) / DAY_MILLIS).toInt()
+    }
+
+    private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
 
     private fun centeredStart(contentWidth: Int, availableWidth: Int): Int =
         ((availableWidth - contentWidth) / 2).coerceAtLeast(0)
