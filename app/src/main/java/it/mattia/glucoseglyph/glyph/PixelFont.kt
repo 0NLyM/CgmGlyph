@@ -53,8 +53,9 @@ object PixelFont {
                 '-' to listOf("0000", "0000", "0000", "1111", "0000", "0000", "0000"),
                 'n' to listOf("0000", "0000", "1100", "1010", "1010", "1010", "1010"),
                 // 'a' redrawn by the designer in their pixel editor (screenshot-extracted, a 3x5
-                // shape right-padded into this style's 4-wide box like 'n' already is).
-                'a' to listOf("0000", "0000", "1100", "0011", "0111", "1011", "1111"),
+                // shape right-padded into this style's 4-wide box like 'n' already is), then
+                // trimmed of its rightmost column and nudged one pixel right per their follow-up.
+                'a' to listOf("0000", "0000", "0110", "0001", "0011", "0101", "0111"),
                 '/' to listOf("0001", "0001", "0010", "0010", "0100", "0100", "1000")
             ),
             width = 4
