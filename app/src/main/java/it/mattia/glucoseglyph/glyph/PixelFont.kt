@@ -96,30 +96,31 @@ object PixelFont {
             ),
             width = 5
         ),
-        // Stile 4: pixel-perfect transcription of the designer's own font sheet, drawn by hand in
-        // their pixel editor (pauwma.github.io/GlyphMatrixEditor) with all ten digits laid out on
-        // one 25x25 canvas and extracted cell-by-cell from that screenshot. Each digit keeps its
-        // own natural width/height exactly as drawn (some are 4 wide and 7 tall, some 5 wide and
-        // 8 tall) rather than being forced into a shared box -- '-'/'n'/'a'/'/' aren't part of the
-        // designer's sheet, so they're carried over from Stile 1 just to keep "---"/"n/a" renderable.
+        // Stile 4: uniform 4x7 blocky/squared family, in the same spirit as the clock's Stile 2 --
+        // started from the designer's own font sheet (drawn by hand in their pixel editor,
+        // pauwma.github.io/GlyphMatrixEditor, all ten digits on one 25x25 canvas) but normalized to
+        // one shared 4x7 box instead of each digit's own natural (and here, quite irregular) size,
+        // improvising the shape wherever a digit didn't already fit that box cleanly.
+        // '-'/'n'/'a'/'/' aren't part of the designer's sheet, so they're carried over from Stile 1
+        // just to keep "---"/"n/a" renderable.
         DigitStyle.STYLE4 to GlyphSet(
             mapOf(
                 '0' to listOf("1111", "1001", "1001", "1001", "1001", "1001", "1111"),
-                '1' to listOf("111", "001", "001", "001", "001", "001", "111"),
+                '1' to listOf("0110", "1110", "0110", "0110", "0110", "0110", "1111"),
                 '2' to listOf("1111", "0001", "0001", "1111", "1000", "1000", "1111"),
                 '3' to listOf("1111", "0001", "0001", "1111", "0001", "0001", "1111"),
-                '4' to listOf("1001", "1001", "1001", "1001", "0001", "1111", "0001", "0001"),
+                '4' to listOf("1001", "1001", "1001", "1111", "0001", "0001", "0001"),
                 '5' to listOf("1111", "1000", "1000", "1111", "0001", "0001", "1111"),
-                '6' to listOf("11111", "10000", "10000", "11111", "10001", "10001", "11111"),
-                '7' to listOf("11111", "00001", "00001", "00011", "00010", "00010", "00010", "00010"),
+                '6' to listOf("1111", "1000", "1000", "1111", "1001", "1001", "1111"),
+                '7' to listOf("1111", "0001", "0001", "0001", "0001", "0001", "0001"),
                 '8' to listOf("1111", "1001", "1001", "1111", "1001", "1001", "1111"),
-                '9' to listOf("11111", "10001", "10001", "11111", "00001", "00001", "00001", "11111"),
+                '9' to listOf("1111", "1001", "1001", "1111", "0001", "0001", "1111"),
                 '-' to listOf("0000", "0000", "0000", "1111", "0000", "0000", "0000"),
                 'n' to listOf("0000", "0000", "1100", "1010", "1010", "1010", "1010"),
                 'a' to listOf("0000", "0000", "0110", "1010", "0110", "1010", "0110"),
                 '/' to listOf("0001", "0001", "0010", "0010", "0100", "0100", "1000")
             ),
-            width = 5
+            width = 4
         )
     )
     const val DOT_WIDTH = 1
