@@ -216,21 +216,20 @@ object PixelFont {
             ),
             width = 3
         ),
-        // Stile 2: a Claude-designed "rounded" family (diamond zero, open corners where the
-        // shape allows), replacing an earlier faulty transcription the designer retired. The
-        // designer approved this set from a render.
+        // Stile 2: a Claude-designed 3x5 "digital/LED" family, replacing the earlier 3x4 rounded
+        // set. The designer approved this set from a render.
         DigitStyle.LEGACY to GlyphSet(
             mapOf(
-                '0' to listOf("010", "101", "101", "010"),
-                '1' to listOf("010", "110", "010", "010"),
-                '2' to listOf("110", "001", "010", "111"),
-                '3' to listOf("110", "001", "011", "110"),
-                '4' to listOf("011", "101", "111", "001"),
-                '5' to listOf("111", "100", "011", "110"),
-                '6' to listOf("011", "100", "111", "110"),
-                '7' to listOf("111", "001", "010", "010"),
-                '8' to listOf("110", "101", "111", "011"),
-                '9' to listOf("011", "111", "001", "110")
+                '0' to listOf("111", "101", "101", "101", "111"),
+                '1' to listOf("010", "110", "010", "010", "111"),
+                '2' to listOf("111", "001", "111", "100", "111"),
+                '3' to listOf("111", "001", "111", "001", "111"),
+                '4' to listOf("101", "101", "111", "001", "001"),
+                '5' to listOf("111", "100", "111", "001", "111"),
+                '6' to listOf("111", "100", "111", "101", "111"),
+                '7' to listOf("111", "001", "010", "010", "010"),
+                '8' to listOf("111", "101", "111", "101", "111"),
+                '9' to listOf("111", "101", "111", "001", "111")
             ),
             width = 3
         ),
