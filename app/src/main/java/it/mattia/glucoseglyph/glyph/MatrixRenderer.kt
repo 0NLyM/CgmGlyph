@@ -42,7 +42,8 @@ object MatrixRenderer {
         includeStatusRows: Boolean = false,
         valueDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
         clockDigitStyle: PixelFont.DigitStyle = PixelFont.DigitStyle.CURRENT,
-        arrowStyle: PixelFont.ArrowStyle = PixelFont.ArrowStyle.CURRENT
+        arrowStyle: PixelFont.ArrowStyle = PixelFont.ArrowStyle.CURRENT,
+        displayMode: ToyDisplayMode = ToyDisplayMode.GLUCOSE
     ): IntArray {
         val grid = IntArray(SIZE * SIZE)
         // A stored style with no glyph data behind it (e.g. persisted before that style was
@@ -56,16 +57,27 @@ object MatrixRenderer {
         val stale = reading != null && (nowMillis - reading.receivedEpochMillis) > STALE_AFTER_MS
         val brightness = if (reading != null && reading.valid && stale) DIM_BRIGHTNESS else FULL_BRIGHTNESS
 
+        // Same reasoning as valueDigits above: a clock style with no clock glyph data (e.g. Stile 4,
+        // which only exists for the glucose-value digits) must degrade to CURRENT, never crash.
+        val clockDigits = PixelFont.clockDigitSets[clockDigitStyle]
+            ?: PixelFont.clockDigitSets.getValue(PixelFont.DigitStyle.CURRENT)
+
         if (includeStatusRows) {
             if (batteryPercent != null) drawBatteryRing(grid, batteryPercent, brightness)
-            drawClock(grid, nowMillis, brightness, PixelFont.clockDigitSets.getValue(clockDigitStyle))
+            drawClock(grid, nowMillis, brightness, clockDigits)
         }
 
-        when {
-            reading == null -> drawPlaceholder(grid, "---", brightness, valueDigits)
-            !reading.valid -> drawPlaceholder(grid, "n/a", brightness, valueDigits)
-            useMmol -> drawMmol(grid, reading.mmol(), reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
-            else -> drawMgdl(grid, reading.mgdl, reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
+        when (displayMode) {
+            ToyDisplayMode.PUMP_BATTERY ->
+                drawValueAndIcon(grid, reading?.pumpBatteryPercent?.toString() ?: "--", PixelFont.batteryIcon, brightness, valueDigits)
+            ToyDisplayMode.RESERVOIR ->
+                drawValueAndIcon(grid, reading?.reservoirUnits?.toString() ?: "--", PixelFont.reservoirIcon, brightness, valueDigits)
+            ToyDisplayMode.GLUCOSE -> when {
+                reading == null -> drawPlaceholder(grid, "---", brightness, valueDigits)
+                !reading.valid -> drawPlaceholder(grid, "n/a", brightness, valueDigits)
+                useMmol -> drawMmol(grid, reading.mmol(), reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
+                else -> drawMgdl(grid, reading.mgdl, reading.trend, reading.sensorExpired, brightness, valueDigits, arrows)
+            }
         }
         return grid
     }
@@ -165,6 +177,16 @@ object MatrixRenderer {
         grid: IntArray, text: String, trend: Trend, sensorExpired: Boolean, brightness: Int,
         valueDigits: PixelFont.GlyphSet, arrows: Map<Trend, List<String>>
     ) {
+        val arrowGlyph = if (sensorExpired) PixelFont.expiredSensor else arrows.getValue(trend)
+        drawValueAndIcon(grid, text, arrowGlyph, brightness, valueDigits)
+    }
+
+    /** Draws "value + a fixed 5-wide icon" as a single centered block, in the exact same font and
+     * position as the glucose value+arrow -- used by the Glyph Toy's pump-battery/reservoir
+     * display modes, where the icon (not a trend arrow) says what the number means. */
+    private fun drawValueAndIcon(
+        grid: IntArray, text: String, icon: List<String>, brightness: Int, valueDigits: PixelFont.GlyphSet
+    ) {
         var totalWidth = 0
         for (c in text) {
             totalWidth += (if (c == '.') PixelFont.DOT_WIDTH else valueDigits.width) + 1
@@ -182,8 +204,7 @@ object MatrixRenderer {
             }
         }
 
-        val arrowGlyph = if (sensorExpired) PixelFont.expiredSensor else arrows.getValue(trend)
-        drawGlyph(grid, arrowGlyph, x, ARROW_Y, brightness)
+        drawGlyph(grid, icon, x, ARROW_Y, brightness)
     }
 
     private fun centeredStart(contentWidth: Int, availableWidth: Int): Int =

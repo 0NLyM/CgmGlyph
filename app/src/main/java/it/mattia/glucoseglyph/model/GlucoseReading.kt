@@ -57,7 +57,13 @@ data class GlucoseReading(
     val valid: Boolean,
     /** True when HomeScreenMirrorResponse.cgmAlertIconId is REPLACE_SENSOR (11) -- the pump's own
      * "sensor expired, insert a new one" alert, the same one it shows on its Dashboard. */
-    val sensorExpired: Boolean = false
+    val sensorExpired: Boolean = false,
+    /** The pump's own battery level (CurrentBatteryV1Response.currentBatteryIbc), 0-100, or null
+     * if that message wasn't in the batch response. */
+    val pumpBatteryPercent: Int? = null,
+    /** Insulin units remaining in the pump's reservoir/cartridge
+     * (InsulinStatusResponse.currentInsulinAmount), or null if unavailable. */
+    val reservoirUnits: Int? = null
 ) {
     fun mmol(): Double = mgdl / 18.0182
 }

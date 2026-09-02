@@ -17,7 +17,9 @@ import it.mattia.glucoseglyph.model.currentBatteryPercent
  * doesn't go stale between glucose polls.
  *
  * Long-pressing the toy toggles between mg/dL and mmol/L, matching the long-press "cycle"
- * convention used by other Glyph Toys.
+ * convention used by other Glyph Toys. A plain press of the Glyph button, or shaking the phone,
+ * instead cycles [ToyDisplayMode] -- glucose (default) -> pump battery -> reservoir units and
+ * back -- always starting back at glucose whenever the toy is (re)bound.
  */
 class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
 
@@ -30,24 +32,48 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
             tickHandler.postDelayed(this, CLOCK_TICK_MS)
         }
     }
+    private val shakeDetector by lazy { ShakeDetector(this) { cycleDisplayMode() } }
+    private var displayMode = ToyDisplayMode.GLUCOSE
+    // EVENT_ACTION_DOWN always fires first, even for what turns into a long press, so a plain
+    // "cycle on press" would also fire on every long-press-to-toggle-units gesture. Only cycling
+    // on release, and only when no long-press was reported in between, tells a short tap apart
+    // from a long hold using the SDK's own event order instead of guessing at a timing threshold.
+    private var longPressHandled = false
 
     override fun performOnServiceConnected(context: Context, glyphMatrixManager: GlyphMatrixManager) {
+        displayMode = ToyDisplayMode.GLUCOSE
         redraw()
         GlucoseState.addListener(onReadingChanged)
         tickHandler.postDelayed(tickRunnable, CLOCK_TICK_MS)
+        shakeDetector.start()
     }
 
     override fun performOnServiceDisconnected(context: Context) {
         GlucoseState.removeListener(onReadingChanged)
         tickHandler.removeCallbacks(tickRunnable)
+        shakeDetector.stop()
     }
 
     override fun onAodTick() {
         redraw()
     }
 
+    override fun onTouchPointPressed() {
+        longPressHandled = false
+    }
+
     override fun onTouchPointLongPress() {
+        longPressHandled = true
         settings.useMmol = !settings.useMmol
+        redraw()
+    }
+
+    override fun onTouchPointReleased() {
+        if (!longPressHandled) cycleDisplayMode()
+    }
+
+    private fun cycleDisplayMode() {
+        displayMode = displayMode.next()
         redraw()
     }
 
@@ -60,7 +86,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
             includeStatusRows = true,
             valueDigitStyle = settings.valueDigitStyle,
             clockDigitStyle = settings.clockDigitStyle,
-            arrowStyle = settings.arrowStyle
+            arrowStyle = settings.arrowStyle,
+            displayMode = displayMode
         )
         try {
             manager.setMatrixFrame(frame)

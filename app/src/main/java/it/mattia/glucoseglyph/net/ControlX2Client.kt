@@ -58,16 +58,25 @@ class ControlX2Client(
     }
 
     /**
-     * Actively asks the pump for a fresh CGM reading and its trend arrow in a single batch:
+     * Actively asks the pump for a fresh CGM reading and its trend arrow, plus its own battery
+     * level and reservoir insulin units, in a single batch:
      *  - opCode 34 (CurrentEGVGuiDataRequest)  -> CurrentEGVGuiDataResponse: mg/dL + timestamp
      *  - opCode 56 (HomeScreenMirrorRequest)   -> HomeScreenMirrorResponse: cgmTrendIconId, the
      *    exact same trend arrow ControlX2's own Dashboard/home screen shows.
-     * Both use the CURRENT_STATUS characteristic.
+     *  - opCode 52 (CurrentBatteryV1Request)   -> CurrentBatteryV1Response: currentBatteryIbc, the
+     *    pump's own displayed battery percent.
+     *  - opCode 36 (InsulinStatusRequest)      -> InsulinStatusResponse: currentInsulinAmount, the
+     *    reservoir/cartridge units remaining.
+     * All four use the CURRENT_STATUS characteristic. The battery/reservoir messages are optional
+     * extras -- a missing or malformed reply for either just leaves that field null, it never
+     * fails the whole reading (only a missing EGV does that).
      */
     fun fetchLatestReading(): FetchResult {
         val body = JSONArray()
             .put(JSONObject().put("cargo", "").put("opCode", 34).put("characteristic", "CURRENT_STATUS"))
             .put(JSONObject().put("cargo", "").put("opCode", 56).put("characteristic", "CURRENT_STATUS"))
+            .put(JSONObject().put("cargo", "").put("opCode", 52).put("characteristic", "CURRENT_STATUS"))
+            .put(JSONObject().put("cargo", "").put("opCode", 36).put("characteristic", "CURRENT_STATUS"))
             .toString().toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
@@ -100,6 +109,8 @@ class ControlX2Client(
         var egv: JSONObject? = null
         var homeScreenTrendIconId: Int? = null
         var homeScreenAlertIconId: Int? = null
+        var pumpBatteryPercent: Int? = null
+        var reservoirUnits: Int? = null
         for (i in 0 until array.length()) {
             val message = array.optJSONObject(i) ?: continue
             val name = message.optString("name")
@@ -110,6 +121,12 @@ class ControlX2Client(
                     homeScreenTrendIconId = params.optInt("cgmTrendIconId", -1).takeIf { it >= 0 }
                     homeScreenAlertIconId = params.optInt("cgmAlertIconId", -1).takeIf { it >= 0 }
                 }
+                // CurrentBatteryV1Response and CurrentBatteryV2Response both expose the pump's
+                // displayed battery percent under this same field name.
+                name.endsWith("CurrentBatteryV1Response") || name.endsWith("CurrentBatteryV2Response") ->
+                    pumpBatteryPercent = params.optInt("currentBatteryIbc", -1).takeIf { it in 0..100 }
+                name.endsWith("InsulinStatusResponse") ->
+                    reservoirUnits = params.optInt("currentInsulinAmount", -1).takeIf { it >= 0 }
             }
         }
 
@@ -135,7 +152,9 @@ class ControlX2Client(
                 valid = cgmReading > 0,
                 // HomeScreenMirrorResponse.CGMAlertIcon.REPLACE_SENSOR == 11: the pump's own
                 // "sensor expired, insert a new one" alert.
-                sensorExpired = homeScreenAlertIconId == 11
+                sensorExpired = homeScreenAlertIconId == 11,
+                pumpBatteryPercent = pumpBatteryPercent,
+                reservoirUnits = reservoirUnits
             )
         )
     }

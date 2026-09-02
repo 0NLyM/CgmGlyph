@@ -12,11 +12,15 @@ object PixelFont {
 
     /** CURRENT is always the designer's latest-confirmed shapes and the default selection.
      * LEGACY/ORIGINAL are kept around purely as alternate looks the designer can switch back to.
-     * Labels are deliberately neutral, numbered in picker order ("Stile 1" = the default). */
+     * Labels are deliberately neutral, numbered in picker order ("Stile 1" = the default).
+     * STYLE4 (glucose-value digits only, extracted from the designer's own pixel-editor sheet) has
+     * no clock counterpart -- both digit pickers filter to `it in <their own map>`, so it simply
+     * never appears in the clock picker. */
     enum class DigitStyle(val label: String) {
         CURRENT("Stile 1"),
         LEGACY("Stile 2"),
-        ORIGINAL("Stile 3")
+        ORIGINAL("Stile 3"),
+        STYLE4("Stile 4")
     }
 
     enum class ArrowStyle(val label: String) {
@@ -60,7 +64,7 @@ object PixelFont {
                 '1' to listOf("110", "010", "010", "010", "010", "010", "111"),
                 '2' to listOf("110", "001", "001", "010", "100", "100", "111"),
                 '3' to listOf("110", "001", "001", "110", "001", "001", "111"),
-                '4' to listOf("001", "010", "100", "101", "110", "001", "001"),
+                '4' to listOf("100", "101", "101", "101", "110", "001", "001"),
                 '5' to listOf("111", "100", "100", "010", "001", "001", "110"),
                 '6' to listOf("011", "100", "100", "110", "101", "101", "011"),
                 '7' to listOf("110", "001", "001", "010", "001", "001", "001"),
@@ -89,6 +93,31 @@ object PixelFont {
                 'n' to listOf("00000", "00000", "10110", "11001", "10001", "10001", "10001"),
                 'a' to listOf("00000", "00000", "01110", "00001", "01111", "10001", "01111"),
                 '/' to listOf("00001", "00001", "00010", "00100", "01000", "10000", "10000")
+            ),
+            width = 5
+        ),
+        // Stile 4: pixel-perfect transcription of the designer's own font sheet, drawn by hand in
+        // their pixel editor (pauwma.github.io/GlyphMatrixEditor) with all ten digits laid out on
+        // one 25x25 canvas and extracted cell-by-cell from that screenshot. Each digit keeps its
+        // own natural width/height exactly as drawn (some are 4 wide and 7 tall, some 5 wide and
+        // 8 tall) rather than being forced into a shared box -- '-'/'n'/'a'/'/' aren't part of the
+        // designer's sheet, so they're carried over from Stile 1 just to keep "---"/"n/a" renderable.
+        DigitStyle.STYLE4 to GlyphSet(
+            mapOf(
+                '0' to listOf("1111", "1001", "1001", "1001", "1001", "1001", "1111"),
+                '1' to listOf("111", "001", "001", "001", "001", "001", "111"),
+                '2' to listOf("1111", "0001", "0001", "1111", "1000", "1000", "1111"),
+                '3' to listOf("1111", "0001", "0001", "1111", "0001", "0001", "1111"),
+                '4' to listOf("1001", "1001", "1001", "1001", "0001", "1111", "0001", "0001"),
+                '5' to listOf("1111", "1000", "1000", "1111", "0001", "0001", "1111"),
+                '6' to listOf("11111", "10000", "10000", "11111", "10001", "10001", "11111"),
+                '7' to listOf("11111", "00001", "00001", "00011", "00010", "00010", "00010", "00010"),
+                '8' to listOf("1111", "1001", "1001", "1111", "1001", "1001", "1111"),
+                '9' to listOf("11111", "10001", "10001", "11111", "00001", "00001", "00001", "11111"),
+                '-' to listOf("0000", "0000", "0000", "1111", "0000", "0000", "0000"),
+                'n' to listOf("0000", "0000", "1100", "1010", "1010", "1010", "1010"),
+                'a' to listOf("0000", "0000", "0110", "1010", "0110", "1010", "0110"),
+                '/' to listOf("0001", "0001", "0010", "0010", "0100", "0100", "1000")
             ),
             width = 5
         )
@@ -191,6 +220,15 @@ object PixelFont {
     // Not part of the style choice -- kept as-is regardless of arrow style.
     val expiredSensor = listOf(
         "10011", "01010", "00100", "01010", "11001"
+    )
+
+    // Fixed 5x5 icons shown in the arrow's slot when the Glyph Toy is cycled to a non-glucose
+    // display mode (see ToyDisplayMode) -- not part of the arrow style choice either.
+    val batteryIcon = listOf(
+        "01110", "11111", "10101", "10101", "11111"
+    )
+    val reservoirIcon = listOf(
+        "00100", "01110", "11111", "11111", "01110"
     )
 
     // --- Clock digit font: CURRENT is today's pixel-perfect re-transcription (photo-verified,
