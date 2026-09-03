@@ -1,0 +1,45 @@
+name: Build ControlX2 Glyph APK
+
+on:
+  push:
+    branches: ["controlx2-glyph"]
+    paths: ["controlx2/**", ".github/workflows/build-controlx2-glyph.yml"]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: controlx2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # controlx2/build.gradle unconditionally reads local.properties even when
+      # use_local_pumpx2 isn't passed as a system property -- an absent file crashes
+      # config, not just the pumpx2-local-jar path. An empty file is enough (matches
+      # upstream's own CI, which does the same `touch`).
+      - name: Create local.properties
+        run: touch local.properties
+
+      # Debug builds sign with the Android Gradle Plugin's own auto-generated debug
+      # keystore -- no secrets needed, unlike the release build upstream's own CI does.
+      - name: Build debug APK
+        run: ./gradlew :mobile:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: controlx2-glyph-debug-apk
+          path: controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk
+          if-no-files-found: error
