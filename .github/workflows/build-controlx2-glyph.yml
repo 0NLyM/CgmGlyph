@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: controlx2
@@ -43,3 +45,23 @@ jobs:
           name: controlx2-glyph-debug-apk
           path: controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk
           if-no-files-found: error
+
+      # Actions artifacts need a GitHub login and come back as a zip -- awkward from a
+      # phone. A Release asset downloads directly (no login, no unzipping) and this reuses
+      # one fixed tag so the link stays the same across every push instead of scattering a
+      # new URL per build.
+      - name: Rename APK for release
+        working-directory: . # override the job's controlx2/ default: both paths below are repo-root-relative
+        run: cp controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk controlx2-glyph-debug.apk
+
+      - name: Publish rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: controlx2-glyph-latest
+          name: "ControlX2 Glyph (latest debug build)"
+          body: |
+            APK di debug, non firmato per il Play Store (installazione diretta/sideload).
+            Build automatica dal branch `controlx2-glyph`, commit ${{ github.sha }}.
+          prerelease: true
+          make_latest: false
+          files: controlx2-glyph-debug.apk
