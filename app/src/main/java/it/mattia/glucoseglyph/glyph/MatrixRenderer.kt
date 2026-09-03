@@ -220,7 +220,7 @@ object MatrixRenderer {
         val totalMillis = sensorDurationDays * 24 * 60 * 60 * 1000L
         val remainingMillis = totalMillis - elapsedMillis
         if (remainingMillis <= 0) return 0
-        return ((remainingMillis + DAY_MILLIS - 1) / DAY_MILLIS).toInt()
+        return (remainingMillis / DAY_MILLIS).toInt()
     }
 
     private const val DAY_MILLIS = 24 * 60 * 60 * 1000L

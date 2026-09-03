@@ -19,13 +19,12 @@ import it.mattia.glucoseglyph.model.currentBatteryPercent
  * A plain press of the Glyph button isn't ours to use -- on real hardware the system consumes it
  * to switch to the next Glyph Toy in the carousel before our own press/release handling ever gets
  * a meaningful look at it -- so onTouchPointPressed/onTouchPointReleased are deliberately left
- * unused for that case (no timer is ever scheduled off a plain press; that was what destabilized
- * an earlier version of this). Only two gestures are used:
- *  - shaking the phone cycles [ToyDisplayMode] -- glucose (default) -> pump battery -> reservoir
- *    units -> sensor days remaining and back -- and a display mode other than glucose reverts to
- *    glucose on its own after [REVERT_TO_GLUCOSE_MS] of no further shake;
- *  - the Glyph button's normal long press plays the heartbeat easter egg. mg/dL<->mmol/L is set
- *    from the app's own screen instead -- the toy no longer has a gesture free for it.
+ * unused. Only two gestures are used:
+ *  - the Glyph button's long press cycles [ToyDisplayMode] -- glucose (default) -> pump battery
+ *    -> reservoir units -> sensor days remaining and back -- and a display mode other than
+ *    glucose reverts to glucose on its own after [REVERT_TO_GLUCOSE_MS] of no further long press;
+ *  - shaking the phone jumps straight back to glucose, wherever the cycle currently is.
+ * mg/dL<->mmol/L is set from the app's own screen -- the toy has no gesture free for it.
  */
 class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
 
@@ -38,9 +37,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
             tickHandler.postDelayed(this, CLOCK_TICK_MS)
         }
     }
-    private val shakeDetector by lazy { ShakeDetector(this) { onShake() } }
+    private val shakeDetector by lazy { ShakeDetector(this) { showGlucose() } }
     private var displayMode = ToyDisplayMode.GLUCOSE
-    private var easterEggPlaying = false
 
     private val revertToGlucoseRunnable = Runnable {
         displayMode = ToyDisplayMode.GLUCOSE
@@ -66,12 +64,13 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     }
 
     override fun onTouchPointLongPress() {
-        playEasterEgg()
+        cycleDisplayMode()
     }
 
-    private fun onShake() {
-        if (easterEggPlaying) return
-        cycleDisplayMode()
+    private fun showGlucose() {
+        tickHandler.removeCallbacks(revertToGlucoseRunnable)
+        displayMode = ToyDisplayMode.GLUCOSE
+        redraw()
     }
 
     private fun cycleDisplayMode() {
@@ -83,22 +82,8 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
         redraw()
     }
 
-    private fun playEasterEgg() {
-        val manager = glyphMatrixManager ?: return
-        tickHandler.removeCallbacks(revertToGlucoseRunnable)
-        easterEggPlaying = true
-        HeartbeatEasterEgg.play(manager, tickHandler) {
-            easterEggPlaying = false
-            if (displayMode != ToyDisplayMode.GLUCOSE) {
-                tickHandler.postDelayed(revertToGlucoseRunnable, REVERT_TO_GLUCOSE_MS)
-            }
-            redraw()
-        }
-    }
-
     private fun redraw() {
         val manager = glyphMatrixManager ?: return
-        if (easterEggPlaying) return
         val frame = MatrixRenderer.render(
             reading = GlucoseState.current,
             useMmol = settings.useMmol,

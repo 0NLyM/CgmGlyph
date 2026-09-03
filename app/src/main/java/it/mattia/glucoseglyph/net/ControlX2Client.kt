@@ -163,7 +163,8 @@ class ControlX2Client(
                 // "sensor expired, insert a new one" alert.
                 sensorExpired = homeScreenAlertIconId == 11,
                 pumpBatteryPercent = pumpBatteryPercent,
-                reservoirUnits = reservoirUnits
+                reservoirUnits = reservoirUnits,
+                sensorStartedEpochMillis = sensorStartedEpochMillis
             )
         )
     }
