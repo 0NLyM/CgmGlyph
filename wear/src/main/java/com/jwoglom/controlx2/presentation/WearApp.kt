@@ -1,0 +1,931 @@
+package com.jwoglom.controlx2.presentation
+
+/*
+ * Copyright 2022 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import android.os.SystemClock
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.KingBed
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
+import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.ScalingLazyListState
+import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.Vignette
+import androidx.wear.compose.material.VignettePosition
+import androidx.wear.compose.material.dialog.Alert
+import androidx.wear.compose.navigation.SwipeDismissableNavHost
+import androidx.wear.compose.navigation.composable
+import androidx.wear.compose.navigation.currentBackStackEntryAsState
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.google.android.horologist.compose.layout.fadeAway
+import com.google.android.horologist.compose.layout.fadeAwayScalingLazyList
+import com.jwoglom.pumpx2.pump.messages.Message
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalcUnits
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusParameters
+import com.jwoglom.pumpx2.pump.messages.request.control.ResumePumpingRequest
+import com.jwoglom.pumpx2.pump.messages.request.control.SuspendPumpingRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.GlobalMaxBolusSettingsRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.HomeScreenMirrorRequest
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.BolusCalcDataSnapshotResponse
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.TimeSinceResetResponse
+import com.jwoglom.controlx2.LocalDataStore
+import com.jwoglom.controlx2.R
+import com.jwoglom.controlx2.dataStore
+import com.jwoglom.controlx2.presentation.components.BottomText
+import com.jwoglom.controlx2.presentation.components.DecimalNumberPicker
+import com.jwoglom.controlx2.presentation.components.SingleNumberPicker
+import com.jwoglom.controlx2.presentation.components.TopText
+import com.jwoglom.controlx2.presentation.navigation.DestinationScrollType
+import com.jwoglom.controlx2.presentation.navigation.SCROLL_TYPE_NAV_ARGUMENT
+import com.jwoglom.controlx2.presentation.navigation.Screen
+import com.jwoglom.controlx2.presentation.ui.BolusScreen
+import com.jwoglom.controlx2.presentation.ui.CGMTransmitterScreen
+import com.jwoglom.controlx2.presentation.ui.CgmChartScreen
+import com.jwoglom.controlx2.presentation.ui.ConnectingToPumpScreen
+import com.jwoglom.controlx2.presentation.ui.BasalDetailScreen
+import com.jwoglom.controlx2.presentation.ui.FullScreenText
+import com.jwoglom.controlx2.presentation.ui.HistoryLogScreen
+import com.jwoglom.controlx2.presentation.ui.IndeterminateProgressIndicator
+import com.jwoglom.controlx2.presentation.ui.LandingScreen
+import com.jwoglom.controlx2.presentation.ui.NightscoutSettingsScreen
+import com.jwoglom.controlx2.presentation.ui.PairingCodeEntryScreen
+import com.jwoglom.controlx2.presentation.ui.PairingUnsupportedOnWatchScreen
+import com.jwoglom.controlx2.presentation.ui.ProfileSwitchScreen
+import com.jwoglom.controlx2.presentation.ui.PumpBondedNeedsUnbondScreen
+import com.jwoglom.controlx2.presentation.ui.PumpDisconnectedReconnectingScreen
+import com.jwoglom.controlx2.presentation.ui.PumpFinderSelectScreen
+import com.jwoglom.controlx2.presentation.ui.RoleSelectionScreen
+import com.jwoglom.controlx2.presentation.ui.SettingsHubScreen
+import com.jwoglom.controlx2.presentation.ui.TempBasalScreen
+import com.jwoglom.controlx2.presentation.ui.WatchNotificationsScreen
+import com.jwoglom.controlx2.presentation.ui.FeatureFlagsScreen
+import com.jwoglom.controlx2.presentation.ui.XdripSettingsScreen
+import com.jwoglom.controlx2.presentation.ui.ScalingLazyListStateViewModel
+import com.jwoglom.controlx2.presentation.ui.ScrollStateViewModel
+import com.jwoglom.controlx2.shared.enums.DeviceRole
+import com.jwoglom.controlx2.util.StatePrefs
+import com.jwoglom.controlx2.WearPrefs
+import com.jwoglom.controlx2.shared.enums.BasalStatus
+import com.jwoglom.controlx2.shared.enums.GlucoseUnit
+import com.jwoglom.controlx2.shared.enums.UserMode
+import com.jwoglom.controlx2.shared.util.SendType
+import com.jwoglom.pumpx2.pump.messages.request.control.SetModesRequest
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+fun WearApp(
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberSwipeDismissableNavController(),
+    sendPumpCommands: (SendType, List<Message>) -> Unit,
+    sendPhoneBolusRequest: (Int, BolusParameters, BolusCalcUnits, BolusCalcDataSnapshotResponse, TimeSinceResetResponse) -> Unit,
+    sendPhoneBolusCancel: () -> Unit,
+    sendPhoneConnectionCheck: () -> Unit,
+    sendPhoneCommand: (String) -> Unit,
+    sendPhoneOpenActivity: () -> Unit,
+) {
+    var themeColors by remember { mutableStateOf(defaultTheme.colors) }
+    WearAppTheme(colors = themeColors) {
+        // Allows user to disable the text before the time.
+        var showProceedingTextBeforeTime by rememberSaveable { mutableStateOf(false) }
+
+        // Allows user to show/hide the vignette on appropriate screens.
+        // IMPORTANT NOTE: Usually you want to show the vignette all the time on screens with
+        // scrolling content, a rolling side button, or a rotating bezel. This preference is just
+        // to visually demonstrate the vignette for the developer to see it on and off.
+        var vignetteVisiblePreference by rememberSaveable { mutableStateOf(true) }
+
+        // Observes the current back stack entry to pull information and determine if the screen
+        // is scrollable and the scrollable state.
+        //
+        // The main reason the state for any scrollable screen is hoisted to this level is so the
+        // Scaffold can properly place the position indicator (also known as the scroll indicator).
+        //
+        // We save the above scrollable states in the SavedStateHandle and retrieve them
+        // when needed from custom view models (see ScrollingViewModels class).
+        //
+        // Screens with scrollable content:
+        //  1. The watch list screen uses ScalingLazyColumn (backed by ScalingLazyListState)
+        //  2. The watch detail screens uses Column with scrolling enabled (backed by ScrollState).
+        //
+        // We also use these scrolling states for various other things (like hiding the time
+        // when the user is scrolling and only showing the vignette when the screen is
+        // scrollable).
+        //
+        // Remember, mobile guidelines specify that if you back navigate out of a screen and then
+        // later navigate into it again, it should be in its initial scroll state (not the last
+        // scroll location it was in before you backed out).
+        val currentBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = currentBackStackEntry?.destination?.route
+
+        val scrollType =
+            currentBackStackEntry?.arguments?.getSerializable(SCROLL_TYPE_NAV_ARGUMENT)
+                ?: DestinationScrollType.NONE
+
+        // TODO: consider moving to ViewModel
+        // Display value is passed down to various user input screens, for the slider and stepper
+        // components specifically, to demonstrate how they work.
+        var bolusUnitsUserInput by remember { mutableStateOf<Double?>(null) }
+        var bolusCarbsGramsUserInput by remember { mutableStateOf<Int?>(null) }
+        var bolusBgMgdlUserInput by remember { mutableStateOf<Int?>(null) }
+
+        val resetSavedBolusEnteredState: () -> Unit = {
+            bolusUnitsUserInput = null
+            bolusCarbsGramsUserInput = null
+            bolusBgMgdlUserInput = null
+        }
+
+        val initialContext = LocalContext.current
+        val initialRoute = remember {
+            if (StatePrefs(initialContext).deviceRole() == DeviceRole.PUMP_HOST &&
+                !WearPrefs(initialContext).pumpSetupComplete()
+            ) {
+                Screen.PumpFinderSelect.route
+            } else {
+                Screen.WaitingForPhone.route
+            }
+        }
+
+        LaunchedEffect (Unit) {
+            navController.navigate(initialRoute)
+        }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val connectionCheckMinIntervalMs = 1500L
+        var lastConnectionCheckTimestampMs by remember { mutableStateOf(0L) }
+        val requestConnectionCheck = {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastConnectionCheckTimestampMs >= connectionCheckMinIntervalMs) {
+                lastConnectionCheckTimestampMs = now
+                sendPhoneConnectionCheck()
+            }
+        }
+
+        LaunchedEffect(currentRoute) {
+            if (currentRoute != null) {
+                requestConnectionCheck()
+            }
+        }
+
+        LaunchedEffect(lifecycleOwner) {
+            lifecycleOwner.repeatOnLifecycle(state = Lifecycle.State.RESUMED) {
+                requestConnectionCheck()
+                awaitCancellation()
+            }
+        }
+
+        Scaffold(
+            modifier = modifier,
+            timeText = {
+                // Scaffold places time at top of screen to follow Material Design guidelines.
+                // (Time is hidden while scrolling.)
+                val timeTextModifier =
+                    when (scrollType) {
+                        DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING -> {
+                            val scrollViewModel: ScalingLazyListStateViewModel =
+                                viewModel(currentBackStackEntry!!)
+                            Modifier.fadeAwayScalingLazyList {
+                                scrollViewModel.scrollState
+                            }
+                        }
+                        DestinationScrollType.COLUMN_SCROLLING -> {
+                            val viewModel: ScrollStateViewModel =
+                                viewModel(currentBackStackEntry!!)
+                            Modifier.fadeAway {
+                                viewModel.scrollState
+                            }
+                        }
+                        DestinationScrollType.TIME_TEXT_ONLY -> {
+                            Modifier
+                        }
+                        else -> {
+                            null
+                        }
+                    }
+
+                key (currentBackStackEntry?.destination?.route) {
+                    TopText(
+                        modifier = timeTextModifier ?: Modifier,
+                        visible = timeTextModifier != null,
+                    )
+                }
+            },
+            vignette = {
+                // Only show vignette for screens with scrollable content.
+                if (scrollType == DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING ||
+                    scrollType == DestinationScrollType.COLUMN_SCROLLING
+                ) {
+                    if (vignetteVisiblePreference) {
+                        Vignette(vignettePosition = VignettePosition.TopAndBottom)
+                    }
+                }
+            },
+            positionIndicator = {
+                // Only displays the position indicator for scrollable content.
+                when (scrollType) {
+                    DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING -> {
+                        // Get or create the ViewModel associated with the current back stack entry
+                        val scrollViewModel: ScalingLazyListStateViewModel =
+                            viewModel(currentBackStackEntry!!)
+                        PositionIndicator(scalingLazyListState = scrollViewModel.scrollState)
+                    }
+                    DestinationScrollType.COLUMN_SCROLLING -> {
+                        // Get or create the ViewModel associated with the current back stack entry
+                        val viewModel: ScrollStateViewModel = viewModel(currentBackStackEntry!!)
+                        PositionIndicator(scrollState = viewModel.scrollState)
+                    }
+                }
+            }
+        ) {
+            /*
+             * Wear OS's version of NavHost supports swipe-to-dismiss (similar to back
+             * gesture on mobile). Otherwise, the code looks very similar.
+             */
+            SwipeDismissableNavHost(
+                navController = navController,
+                startDestination = initialRoute,
+                modifier = Modifier.background(MaterialTheme.colors.background)
+            ) {
+
+                // WaitingForPhone
+                composable(Screen.WaitingForPhone.route) {
+                    IndeterminateProgressIndicator(text = "Waiting for phone")
+                }
+
+                composable(Screen.WaitingToFindPump.route) {
+                    IndeterminateProgressIndicator(text = "Waiting to find pump")
+                }
+
+                composable(Screen.ConnectingToPump.route) {
+                    ConnectingToPumpScreen()
+                }
+
+                composable(Screen.PairingToPump.route) {
+                    IndeterminateProgressIndicator(text = "Pairing to pump")
+                }
+
+                composable(Screen.MissingPairingCode.route) {
+                    IndeterminateProgressIndicator(text = "Pump pairing needed")
+                }
+
+                composable(Screen.PumpDisconnectedReconnecting.route) {
+                    PumpDisconnectedReconnectingScreen()
+                }
+
+                // --- Watch-as-pump-host pairing flow ---
+                composable(Screen.PumpFinderSelect.route) {
+                    PumpFinderSelectScreen(
+                        navController = navController,
+                        sendPhoneCommand = sendPhoneCommand,
+                    )
+                }
+                composable(Screen.PairingCodeEntry.route) {
+                    PairingCodeEntryScreen()
+                }
+                composable(Screen.PairingUnsupportedOnWatch.route) {
+                    PairingUnsupportedOnWatchScreen()
+                }
+                composable(Screen.PumpBondedNeedsUnbond.route) {
+                    PumpBondedNeedsUnbondScreen()
+                }
+
+                // --- Settings hub + sub-screens ---
+                composable(Screen.SettingsHub.route) {
+                    SettingsHubScreen(
+                        navController = navController,
+                        sendPhoneCommand = sendPhoneCommand,
+                        sendPhoneOpenActivity = sendPhoneOpenActivity,
+                    )
+                }
+                composable(Screen.NightscoutSettings.route) {
+                    NightscoutSettingsScreen()
+                }
+                composable(Screen.XdripSettings.route) {
+                    XdripSettingsScreen()
+                }
+                composable(Screen.FeatureFlags.route) {
+                    FeatureFlagsScreen()
+                }
+                composable(
+                    route = Screen.HistoryLog.route,
+                    arguments = listOf(
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val listState = scalingLazyListState(it)
+                    val focusRequester = remember { FocusRequester() }
+                    HistoryLogScreen(
+                        scalingLazyListState = listState,
+                        focusRequester = focusRequester,
+                    )
+                    RequestFocusOnResume(focusRequester)
+                }
+                composable(
+                    route = Screen.BasalDetail.route,
+                    arguments = listOf(
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val listState = scalingLazyListState(it)
+                    val focusRequester = remember { FocusRequester() }
+                    BasalDetailScreen(
+                        scalingLazyListState = listState,
+                        focusRequester = focusRequester,
+                        sendPumpCommands = sendPumpCommands,
+                    )
+                    RequestFocusOnResume(focusRequester)
+                }
+                composable(
+                    route = Screen.ProfileSwitch.route,
+                    arguments = listOf(
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val listState = scalingLazyListState(it)
+                    val focusRequester = remember { FocusRequester() }
+                    ProfileSwitchScreen(
+                        scalingLazyListState = listState,
+                        focusRequester = focusRequester,
+                        sendPumpCommands = sendPumpCommands,
+                    )
+                    RequestFocusOnResume(focusRequester)
+                }
+                composable(Screen.TempBasalSet.route) {
+                    // No outer FocusRequester / scalingLazyListState wiring:
+                    // TempBasalScreen is driven entirely by SingleNumberPicker,
+                    // which manages its own rotary focus internally — same
+                    // pattern as BolusSelectCarbs / BolusSelectBG above.
+                    TempBasalScreen(
+                        sendPumpCommands = sendPumpCommands,
+                        onDone = { navController.popBackStack() },
+                    )
+                    BottomText()
+                }
+                composable(
+                    route = Screen.Notifications.route,
+                    arguments = listOf(
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val listState = scalingLazyListState(it)
+                    val focusRequester = remember { FocusRequester() }
+                    WatchNotificationsScreen(
+                        scalingLazyListState = listState,
+                        focusRequester = focusRequester,
+                        sendPumpCommands = sendPumpCommands,
+                    )
+                    RequestFocusOnResume(focusRequester)
+                }
+                composable(
+                    route = Screen.CGMTransmitter.route,
+                    arguments = listOf(
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val listState = scalingLazyListState(it)
+                    val focusRequester = remember { FocusRequester() }
+                    CGMTransmitterScreen(
+                        scalingLazyListState = listState,
+                        focusRequester = focusRequester,
+                        sendPumpCommands = sendPumpCommands,
+                    )
+                    RequestFocusOnResume(focusRequester)
+                }
+                composable(Screen.CgmChart.route) {
+                    // CGM chart is a fixed Canvas — no scaling-lazy-column,
+                    // no rotary scroll. Just render and let the user swipe
+                    // back to dismiss.
+                    CgmChartScreen()
+                    BottomText()
+                }
+                // Main Window
+                composable(
+                    route = Screen.Landing.route,
+                    arguments = listOf(
+                        // In this case, the argument isn't part of the route, it's just attached
+                        // as information for the destination.
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val scalingLazyListState = scalingLazyListState(it)
+
+                    val focusRequester = remember { FocusRequester() }
+
+                    LandingScreen(
+                        scalingLazyListState = scalingLazyListState,
+                        focusRequester = focusRequester,
+                        navController = navController,
+                        sendPumpCommands = sendPumpCommands,
+                        resetSavedBolusEnteredState = resetSavedBolusEnteredState,
+                    )
+
+                    RequestFocusOnResume(focusRequester)
+                    BottomText()
+                }
+
+                composable(Screen.RoleSelection.route) {
+                    RoleSelectionScreen(
+                        onCancel = { navController.popBackStack() },
+                    )
+                    BottomText()
+                }
+
+                composable(Screen.SleepModeSet.route) {
+                    val controlIQMode = dataStore.controlIQMode.observeAsState()
+                    Alert(
+                        title = {
+                            Text(
+                                text = when (controlIQMode.value) {
+                                    UserMode.SLEEP -> "Disable Sleep mode?"
+                                    UserMode.NONE -> "Enable Sleep mode?"
+                                    else -> "Already in ${controlIQMode.value?.str} mode, that must be disabled first."
+                                },
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onBackground
+                            )
+                        },
+                        negativeButton = {
+                            Button(
+                                onClick = {
+                                    navController.navigate(Screen.Landing.route)
+                                },
+                                colors = ButtonDefaults.secondaryButtonColors()
+                            ) {
+                                Icon(imageVector = Icons.Filled.Clear, contentDescription = "Cancel")
+                            }
+                        },
+                        positiveButton = {
+                            when (controlIQMode.value) {
+                                UserMode.SLEEP ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(
+                                                SetModesRequest(SetModesRequest.ModeCommand.SLEEP_MODE_OFF)
+                                            ))
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors()
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Disable Sleep mode")
+                                    }
+
+                                UserMode.NONE ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(
+                                                SetModesRequest(SetModesRequest.ModeCommand.SLEEP_MODE_ON)
+                                            ))
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors()
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Enable Sleep mode")
+                                    }
+                                else -> {}
+                            }
+                        },
+                        icon = {
+                            Image(
+                                Icons.Filled.KingBed,
+                                "Sleep mode",
+                                Modifier.size(24.dp)
+                            )
+                        },
+                    ) {}
+                    BottomText()
+                }
+
+                composable(Screen.ExerciseModeSet.route) {
+                    val controlIQMode = dataStore.controlIQMode.observeAsState()
+                    Alert(
+                        title = {
+                            Text(
+                                text = when (controlIQMode.value) {
+                                    UserMode.EXERCISE -> "Disable Exercise mode?"
+                                    UserMode.NONE -> "Enable Exercise mode?"
+                                    else -> "Already in ${controlIQMode.value?.str} mode, that must be disabled first."
+                                },
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onBackground
+                            )
+                        },
+                        negativeButton = {
+                            Button(
+                                onClick = {
+                                    navController.navigate(Screen.Landing.route)
+                                },
+                                colors = ButtonDefaults.secondaryButtonColors()
+                            ) {
+                                Icon(imageVector = Icons.Filled.Clear, contentDescription = "Cancel")
+                            }
+                        },
+                        positiveButton = {
+                            when (controlIQMode.value) {
+                                UserMode.EXERCISE ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(
+                                                SetModesRequest(SetModesRequest.ModeCommand.EXERCISE_MODE_OFF)
+                                            ))
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors()
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Disable Exercise mode")
+                                    }
+
+                                UserMode.NONE ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(
+                                                SetModesRequest(SetModesRequest.ModeCommand.EXERCISE_MODE_ON)
+                                            ))
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors()
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Enable Exercise mode")
+                                    }
+                                else -> {}
+                            }
+                        },
+                        icon = {
+                            Image(
+                                Icons.AutoMirrored.Filled.DirectionsRun,
+                                "Exercise mode",
+                                Modifier.size(24.dp)
+                            )
+                        },
+                    ) {}
+                    BottomText()
+                }
+
+                composable(Screen.SuspendPumpingSet.route) {
+                    val basalStatus = dataStore.basalStatus.observeAsState()
+                    val pollScope = rememberCoroutineScope()
+                    // Mirror of mobile Actions.kt: 5 x HomeScreenMirrorRequest @ 1s
+                    // after a suspend/resume so `dataStore.basalStatus` refreshes
+                    // before the pump reports the state change asynchronously.
+                    fun pollBasalStatus() {
+                        pollScope.launch {
+                            repeat(5) {
+                                delay(1000)
+                                sendPumpCommands(SendType.BUST_CACHE, listOf(HomeScreenMirrorRequest()))
+                            }
+                        }
+                    }
+                    Alert(
+                        title = {
+                            Text(
+                                text = when (basalStatus.value) {
+                                    BasalStatus.PUMP_SUSPENDED -> "Resume insulin deliveries?"
+                                    BasalStatus.UNKNOWN, null -> "Insulin state unknown, try again in a moment."
+                                    else -> "Suspend all insulin deliveries?"
+                                },
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onBackground,
+                            )
+                        },
+                        negativeButton = {
+                            Button(
+                                onClick = { navController.navigate(Screen.Landing.route) },
+                                colors = ButtonDefaults.secondaryButtonColors(),
+                            ) {
+                                Icon(imageVector = Icons.Filled.Clear, contentDescription = "Cancel")
+                            }
+                        },
+                        positiveButton = {
+                            when (basalStatus.value) {
+                                BasalStatus.PUMP_SUSPENDED ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(ResumePumpingRequest()))
+                                            pollBasalStatus()
+                                            navController.navigate(Screen.Landing.route)
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors(),
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Resume insulin")
+                                    }
+                                BasalStatus.UNKNOWN, null -> {}
+                                else ->
+                                    Button(
+                                        onClick = {
+                                            sendPumpCommands(SendType.BUST_CACHE, listOf(SuspendPumpingRequest()))
+                                            pollBasalStatus()
+                                            navController.navigate(Screen.Landing.route)
+                                        },
+                                        colors = ButtonDefaults.primaryButtonColors(),
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Suspend insulin")
+                                    }
+                            }
+                        },
+                        icon = {
+                            Image(
+                                imageVector = when (basalStatus.value) {
+                                    BasalStatus.PUMP_SUSPENDED -> Icons.Filled.PlayArrow
+                                    else -> Icons.Filled.Stop
+                                },
+                                contentDescription = "Insulin",
+                                modifier = Modifier.size(24.dp),
+                            )
+                        },
+                    ) {}
+                    BottomText()
+                }
+
+                composable(
+                    route = Screen.Bolus.route,
+                    arguments = listOf(
+                        // In this case, the argument isn't part of the route, it's just attached
+                        // as information for the destination.
+                        navArgument(SCROLL_TYPE_NAV_ARGUMENT) {
+                            type = NavType.EnumType(DestinationScrollType::class.java)
+                            defaultValue = DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+                        }
+                    )
+                ) {
+                    val scalingLazyListState = scalingLazyListState(it)
+
+                    val focusRequester = remember { FocusRequester() }
+
+                    BolusScreen(
+                        scalingLazyListState = scalingLazyListState,
+                        focusRequester = focusRequester,
+                        bolusUnitsUserInput = bolusUnitsUserInput,
+                        bolusCarbsGramsUserInput = bolusCarbsGramsUserInput,
+                        bolusBgMgdlUserInput = bolusBgMgdlUserInput,
+                        onClickUnits = {
+                            navController.navigate(Screen.BolusSelectUnitsScreen.route)
+                        },
+                        onClickCarbs = {
+                            navController.navigate(Screen.BolusSelectCarbsScreen.route)
+                        },
+                        onClickBG = {
+                            navController.navigate(Screen.BolusSelectBGScreen.route)
+                        },
+                        onClickLanding = {
+                            navController.navigate(Screen.Landing.route)
+                        },
+                        sendPumpCommands = sendPumpCommands,
+                        sendPhoneBolusRequest = sendPhoneBolusRequest,
+                        sendPhoneBolusCancel = sendPhoneBolusCancel,
+                        resetSavedBolusEnteredState = resetSavedBolusEnteredState,
+                    )
+
+                    RequestFocusOnResume(focusRequester)
+                    BottomText()
+                }
+
+                composable(Screen.BolusSelectUnitsScreen.route) {
+                    val ds = LocalDataStore.current
+                    val bolusCalculatorBuilder = ds.bolusCalculatorBuilder.observeAsState()
+                    val maxBolusAmount = ds.maxBolusAmount.observeAsState()
+                    val currentUnits = bolusCalculatorBuilder.value?.insulinUnits?.total
+                    LaunchedEffect(Unit) {
+                        sendPumpCommands(SendType.CACHED, listOf(GlobalMaxBolusSettingsRequest()))
+                    }
+
+                    DecimalNumberPicker(
+                        label = "Units",
+                        onNumberConfirm = {
+                            navController.popBackStack()
+                            bolusUnitsUserInput = it
+                        },
+                        labelColors = defaultTheme.colors,
+                        rotaryScrollCalc = rotaryExponentialScroll(1.3f),
+                        maxNumber = when (maxBolusAmount.value) {
+                            null -> 30
+                            else -> maxBolusAmount.value!!.toInt()
+                        },
+                        defaultNumber = when {
+                            bolusUnitsUserInput != null -> bolusUnitsUserInput
+                            currentUnits != null -> currentUnits
+                            else -> 0.0
+                         },
+                    )
+                    BottomText()
+                }
+
+                composable(Screen.BolusSelectCarbsScreen.route) {
+                    val ds = LocalDataStore.current
+                    val bolusCalculatorBuilder = ds.bolusCalculatorBuilder.observeAsState()
+                    val maxCarbAmount = ds.maxCarbAmount.observeAsState()
+                    val currentCarbs = bolusCalculatorBuilder.value?.carbsValueGrams?.orElse(null)
+                    SingleNumberPicker(
+                        label = "Carbs",
+                        maxNumber = when {
+                            maxCarbAmount.value != null -> maxCarbAmount.value!!
+                            else -> 100
+                        },
+                        defaultNumber = when {
+                            currentCarbs != null -> currentCarbs
+                            bolusCarbsGramsUserInput != null -> bolusCarbsGramsUserInput!!
+                            else -> 0
+                        },
+                        rotaryScrollCalc = rotaryExponentialScroll(1.3f),
+                        onNumberConfirm = {
+                            navController.popBackStack()
+                            bolusCarbsGramsUserInput = it
+                        }
+                    )
+                    BottomText()
+                }
+
+                composable(Screen.BolusSelectBGScreen.route) {
+                    val ds = LocalDataStore.current
+                    val bolusCalculatorBuilder = ds.bolusCalculatorBuilder.observeAsState()
+                    val glucoseUnitPreference = ds.glucoseUnitPreference.observeAsState()
+                    val currentBG = bolusCalculatorBuilder.value?.glucoseMgdl?.orElse(null)
+                    val glucoseUnit = glucoseUnitPreference.value ?: GlucoseUnit.MGDL
+
+                    SingleNumberPicker(
+                        label = "BG (${glucoseUnit.abbreviation})",
+                        minNumber = 40,
+                        maxNumber = 400,
+                        defaultNumber = when {
+                            currentBG != null -> currentBG
+                            else -> 120
+                        },
+                        rotaryScrollCalc = rotaryExponentialScroll(1.5f),
+                        onNumberConfirm = {
+                            navController.popBackStack()
+                            bolusBgMgdlUserInput = it
+                        }
+                    )
+                    BottomText()
+                }
+
+                composable(Screen.BolusBlocked.route) {
+                    FullScreenText("A bolus was blocked which didn't match the units requested. This is either a bug in ControlX2 or another actor is attempting to bolus via your phone and/or watch unsuccessfully.")
+                    BottomText()
+                }
+                composable(Screen.BolusNotEnabled.route) {
+                    FullScreenText("A bolus was requested, but actions affecting insulin delivery are not enabled in the phone app settings.")
+                    BottomText()
+                }
+                composable(Screen.BolusRejectedOnPhone.route) {
+                    Alert(
+                        title = {
+                            Text(
+                                text = "Bolus Rejected on Phone",
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onBackground
+                            )
+                        },
+                        negativeButton = {
+                            Button(
+                                onClick = {
+                                    navController.navigate(Screen.Landing.route)
+                                },
+                                colors = ButtonDefaults.secondaryButtonColors(),
+                                modifier = Modifier.fillMaxWidth()
+
+                            ) {
+                                Text("Cancel")
+                            }
+                        },
+                        positiveButton = {},
+                        icon = {
+                            Image(
+                                painterResource(R.drawable.bolus_icon),
+                                "Bolus icon",
+                                Modifier.size(24.dp)
+                            )
+                        },
+                    ) {
+                        Text(
+                            text = "The bolus request was rejected by the connected phone.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.body2,
+                            color = MaterialTheme.colors.onBackground
+                        )
+                    }
+                    BottomText()
+                }
+            }
+        }
+    }
+}
+
+private fun rotaryExponentialScroll(factor: Float): (Float) -> Float {
+    return { weight -> when {
+        weight < 0f -> -1f * abs(weight).pow(factor)
+        else -> weight.pow(factor)
+    }}
+}
+
+@Composable
+private fun menuNameAndCallback(
+    navController: NavHostController,
+    menuName: String,
+    screen: Screen
+) = MenuItem(menuName) { navController.navigate(screen.route) }
+
+@Composable
+private fun scrollState(it: NavBackStackEntry): ScrollState {
+    val passedScrollType = it.arguments?.getSerializable(SCROLL_TYPE_NAV_ARGUMENT)
+
+    check(passedScrollType == DestinationScrollType.COLUMN_SCROLLING) {
+        "Scroll type must be DestinationScrollType.COLUMN_SCROLLING"
+    }
+
+    val scrollViewModel: ScrollStateViewModel = viewModel(it)
+    return scrollViewModel.scrollState
+}
+
+@Composable
+private fun scalingLazyListState(it: NavBackStackEntry): ScalingLazyListState {
+    val passedScrollType = it.arguments?.getSerializable(SCROLL_TYPE_NAV_ARGUMENT)
+
+    check(
+        passedScrollType == DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING
+    ) {
+        "Scroll type must be DestinationScrollType.SCALING_LAZY_COLUMN_SCROLLING"
+    }
+
+    val scrollViewModel: ScalingLazyListStateViewModel = viewModel(it)
+
+    return scrollViewModel.scrollState
+}
+
+@Composable
+private fun RequestFocusOnResume(focusRequester: FocusRequester) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(Unit) {
+        lifecycleOwner.repeatOnLifecycle(state = Lifecycle.State.RESUMED) {
+            focusRequester.requestFocus()
+        }
+    }
+}
+
+data class MenuItem(val name: String, val clickHander: () -> Unit)

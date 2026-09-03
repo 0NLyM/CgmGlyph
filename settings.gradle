@@ -1,0 +1,27 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+        maven {
+            url = 'https://jitpack.io'
+        }
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = 'https://jitpack.io'
+        }
+    }
+}
+rootProject.name = "ControlX2"
+include ':mobile'
+include ':wear'
+include ':shared'
+include ':pumpcomm'
+include ':clientcomm'
+include ':db'

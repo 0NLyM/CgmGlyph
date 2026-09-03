@@ -1,0 +1,606 @@
+package com.jwoglom.controlx2.presentation.ui
+
+import android.content.res.Configuration
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.material.AutoCenteringParams
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
+import androidx.wear.compose.material.Chip
+import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.ScalingLazyColumn
+import androidx.wear.compose.material.ScalingLazyListState
+import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.dialog.Alert
+import androidx.wear.compose.material.dialog.Dialog
+import com.google.android.horologist.compose.navscaffold.scrollableColumn
+import com.jwoglom.pumpx2.pump.messages.Message
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalcCondition
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalcCondition.*
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalcDecision
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalcUnits
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusCalculatorBuilder
+import com.jwoglom.pumpx2.pump.messages.calculator.BolusParameters
+import com.jwoglom.pumpx2.pump.messages.request.control.BolusPermissionRequest
+import com.jwoglom.pumpx2.pump.messages.request.control.CancelBolusRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.BolusCalcDataSnapshotRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.CurrentBolusStatusRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.LastBGRequest
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.LastBolusStatusV2Request
+import com.jwoglom.pumpx2.pump.messages.request.currentStatus.TimeSinceResetRequest
+import com.jwoglom.pumpx2.pump.messages.response.control.CancelBolusResponse.CancelStatus
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.BolusCalcDataSnapshotResponse
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.CurrentBolusStatusResponse.CurrentBolusStatus
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.LastBGResponse
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.TimeSinceResetResponse
+import com.jwoglom.controlx2.LocalDataStore
+import com.jwoglom.controlx2.R
+import com.jwoglom.controlx2.dataStore
+import com.jwoglom.controlx2.presentation.DataStore
+import com.jwoglom.controlx2.presentation.components.LineTextDescription
+import com.jwoglom.controlx2.presentation.ui.components.BolusCarbsAndBgRow
+import com.jwoglom.controlx2.presentation.ui.components.BolusUnitsChip
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusApprovedPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusCancelledPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusCancellingPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusConditionsPromptPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusConfirmPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusInProgressPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusInputPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusPermissionCheckPhase
+import com.jwoglom.controlx2.presentation.ui.components.bolus.BolusPermissionTransitionPhase
+import com.jwoglom.controlx2.presentation.defaultTheme
+import com.jwoglom.controlx2.shared.enums.GlucoseUnit
+import com.jwoglom.controlx2.shared.util.GlucoseConverter
+import com.jwoglom.controlx2.shared.presentation.LifecycleStateObserver
+import com.jwoglom.controlx2.shared.util.SendType
+import com.jwoglom.controlx2.shared.util.firstLetterCapitalized
+import com.jwoglom.controlx2.shared.util.snakeCaseToSpace
+import com.jwoglom.controlx2.shared.util.twoDecimalPlaces
+import com.jwoglom.controlx2.shared.util.twoDecimalPlaces1000Unit
+import com.jwoglom.pumpx2.pump.messages.bluetooth.PumpStateSupplier
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import timber.log.Timber
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun BolusScreen(
+    scalingLazyListState: ScalingLazyListState,
+    focusRequester: FocusRequester,
+    bolusUnitsUserInput: Double?,
+    bolusCarbsGramsUserInput: Int?,
+    bolusBgMgdlUserInput: Int?,
+    onClickUnits: (Double?) -> Unit,
+    onClickCarbs: () -> Unit,
+    onClickBG: () -> Unit,
+    onClickLanding: () -> Unit,
+    sendPumpCommands: (SendType, List<Message>) -> Unit,
+    sendPhoneBolusRequest: (Int, BolusParameters, BolusCalcUnits, BolusCalcDataSnapshotResponse, TimeSinceResetResponse) -> Unit,
+    resetSavedBolusEnteredState: () -> Unit,
+    sendPhoneBolusCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showBolusConditionPrompt by remember { mutableStateOf(false) }
+    var showPermissionCheckDialog by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var showInProgressDialog by remember { mutableStateOf(false) }
+    var showCancelledDialog by remember { mutableStateOf(false) }
+    var showCancellingDialog by remember { mutableStateOf(false) }
+    var showApprovedDialog by remember { mutableStateOf(false) }
+
+    fun resetDialogs() {
+        showPermissionCheckDialog = false
+        showConfirmDialog = false
+        showInProgressDialog = false
+        showCancelledDialog = false
+        showCancellingDialog = false
+        showApprovedDialog = false
+    }
+
+    val refreshScope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(true) }
+
+    val dataStore = LocalDataStore.current
+    val glucoseUnit by dataStore.glucoseUnitPreference.observeAsState(GlucoseUnit.MGDL)
+    val unitAbbrev = glucoseUnit.abbreviation
+
+    fun buildBolusCalculator(
+        dataSnapshot: BolusCalcDataSnapshotResponse?,
+        lastBG: LastBGResponse?,
+        bolusUnitsUserInput: Double?,
+        bolusCarbsGramsUserInput: Int?,
+        bolusBgMgdlUserInput: Int?
+    ): BolusCalculatorBuilder {
+        Timber.i("buildBolusCalculator: INPUT units=$bolusUnitsUserInput carbs=$bolusCarbsGramsUserInput bg=$bolusBgMgdlUserInput dataSnapshot=$dataSnapshot lastBG=$lastBG")
+        val bolusCalc = BolusCalculatorBuilder()
+        if (dataSnapshot != null) {
+            bolusCalc.onBolusCalcDataSnapshotResponse(dataSnapshot)
+        }
+        if (lastBG != null) {
+            bolusCalc.onLastBGResponse(lastBG)
+        }
+
+        bolusCalc.setInsulinUnits(bolusUnitsUserInput)
+        bolusCalc.setCarbsValueGrams(bolusCarbsGramsUserInput)
+        bolusCalc.setGlucoseMgdl(bolusBgMgdlUserInput)
+        return bolusCalc
+    }
+
+    fun bolusCalcDecision(
+        bolusCalc: BolusCalculatorBuilder?,
+        bolusConditionsExcluded: MutableSet<BolusCalcCondition>?
+    ): BolusCalcDecision? {
+        val excluded = (bolusConditionsExcluded ?: mutableSetOf()).stream().toArray { arrayOfNulls<BolusCalcCondition>(it) }
+        val decision = bolusCalc?.build()?.parse(*excluded)
+        Timber.i("bolusCalcDecision: OUTPUT units=${decision?.units} conditions=${decision?.conditions} excluded=$excluded")
+        return decision
+    }
+
+    fun bolusCalcParameters(
+        bolusCalc: BolusCalculatorBuilder?,
+        bolusConditionsExcluded: MutableSet<BolusCalcCondition>?
+    ): Pair<BolusParameters, BolusCalcUnits> {
+        val decision = bolusCalcDecision(bolusCalc, bolusConditionsExcluded)
+        return Pair(
+            BolusParameters(
+                decision?.units?.total,
+                bolusCalc?.carbsValueGrams?.orElse(0),
+                bolusCalc?.glucoseMgdl?.orElse(0)
+            ),
+            decision!!.units!!)
+    }
+
+    val commands = listOf(
+        BolusCalcDataSnapshotRequest(),
+        LastBGRequest(),
+        TimeSinceResetRequest(),
+    )
+
+    val baseFields = listOf(
+        dataStore.bolusCalcDataSnapshot,
+        dataStore.bolusCalcLastBG
+    )
+
+    val calculatedFields = listOf(
+        dataStore.bolusCalculatorBuilder,
+        dataStore.bolusCurrentParameters
+    )
+
+    @Synchronized
+    fun waitForLoaded() = refreshScope.launch {
+        var sinceLastFetchTime = 0
+        while (true) {
+            val nullBaseFields = baseFields.filter { field -> field.value == null }.toSet()
+            if (nullBaseFields.isEmpty()) {
+                break
+            }
+
+            Timber.i("BolusScreen loading: remaining ${nullBaseFields.size}: ${baseFields.map { it.value }}")
+            if (sinceLastFetchTime >= 2500) {
+                Timber.i("BolusScreen loading re-fetching")
+                // for safety reasons, NEVER CACHE.
+                sendPumpCommands(SendType.STANDARD, commands)
+                sinceLastFetchTime = 0
+            }
+
+            delay(250)
+            sinceLastFetchTime += 250
+        }
+        Timber.i("BolusScreen base loading done: ${baseFields.map { it.value }}")
+        if (sinceLastFetchTime == 0) {
+            delay(250)
+        }
+        refreshing = false
+    }
+
+    fun refresh() = refreshScope.launch {
+        refreshing = true
+
+        baseFields.forEach { field -> field.value = null }
+        calculatedFields.forEach { field -> field.value = null }
+        sendPumpCommands(SendType.BUST_CACHE, commands)
+    }
+
+    val state = rememberPullRefreshState(refreshing, ::refresh)
+
+    LifecycleStateObserver(lifecycleOwner = LocalLifecycleOwner.current, onStop = {
+    }) {
+        sendPumpCommands(SendType.BUST_CACHE, commands)
+    }
+
+    LaunchedEffect (refreshing) {
+        waitForLoaded()
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pullRefresh(state)
+    ) {
+        PullRefreshIndicator(
+            refreshing, state,
+            Modifier
+                .align(Alignment.TopCenter)
+                .zIndex(10f)
+        )
+
+        val bolusCalcDataSnapshot = dataStore.bolusCalcDataSnapshot.observeAsState()
+        val bolusCalcLastBG = dataStore.bolusCalcLastBG.observeAsState()
+        val bolusConditionsExcluded = dataStore.bolusConditionsExcluded.observeAsState()
+
+        fun recalculate() {
+            dataStore.bolusCalculatorBuilder.value = buildBolusCalculator(
+                bolusCalcDataSnapshot.value,
+                bolusCalcLastBG.value,
+                bolusUnitsUserInput,
+                bolusCarbsGramsUserInput,
+                bolusBgMgdlUserInput
+            )
+
+            dataStore.bolusCurrentParameters.value =
+                bolusCalcParameters(dataStore.bolusCalculatorBuilder.value, bolusConditionsExcluded.value).first
+
+            fun sortConditions(set: Set<BolusCalcCondition>?): List<BolusCalcCondition> {
+                if (set == null) {
+                    return emptyList()
+                }
+
+                return set.sortedWith(
+                    compareBy(
+                        { it.javaClass == FailedSanityCheck::class.java },
+                        { it.javaClass == FailedPrecondition::class.java },
+                        { it.javaClass == WaitingOnPrecondition::class.java },
+                        { it.javaClass == Decision::class.java },
+                        { it.javaClass == NonActionDecision::class.java },
+                    )
+                )
+            }
+            val conditions = bolusCalcDecision(dataStore.bolusCalculatorBuilder.value, bolusConditionsExcluded.value)?.conditions
+            dataStore.bolusCurrentConditions.value = sortConditions(conditions)
+
+            val conditionsWithPrompt = conditions?.filter {
+                it.prompt != null
+            }
+            val conditionsAcknowledged = dataStore.bolusConditionsPromptAcknowledged.value
+            Timber.d("bolusCalc conditionsWithPrompt: $conditionsWithPrompt conditionsAcknowledged: $conditionsAcknowledged conditions: $conditions")
+            if (conditionsWithPrompt?.size == 1) {
+                var alreadyAcked = false
+                conditionsAcknowledged?.forEach {
+                    if (conditionsWithPrompt[0] == it) {
+                        alreadyAcked = true
+                    }
+                }
+                if (alreadyAcked) {
+                    Timber.d("bolusCalc: Not displaying acknowledged prompt again: $conditionsAcknowledged")
+                } else {
+                    dataStore.bolusConditionsPrompt.value = mutableListOf<BolusCalcCondition>().let {
+                        it.addAll(conditionsWithPrompt)
+                        it
+                    }
+                    showBolusConditionPrompt = true
+                }
+            } else {
+                dataStore.bolusConditionsPrompt.value = null
+                showBolusConditionPrompt = false
+            }
+
+            dataStore.bolusUnitsDisplayedText.value = when (bolusUnitsUserInput) {
+                null -> when (dataStore.bolusCurrentParameters.value) {
+                    null -> "0.00u"
+                    else -> "${twoDecimalPlaces(dataStore.bolusCurrentParameters.value!!.units)}u"
+                }
+                else -> "${twoDecimalPlaces(bolusUnitsUserInput)}u"
+            }
+            dataStore.bolusUnitsDisplayedSubtitle.value = when (bolusUnitsUserInput) {
+                null -> when (dataStore.bolusCurrentParameters.value) {
+                    null -> "Units"
+                    else -> "Calculated"
+                }
+                else -> "Override"
+            }
+
+            val autofilledBg = dataStore.bolusCalculatorBuilder.value?.glucoseMgdl?.orElse(null)
+            dataStore.bolusBGDisplayedText.value = when {
+                bolusBgMgdlUserInput != null -> GlucoseConverter.format(bolusBgMgdlUserInput!!, glucoseUnit)
+                autofilledBg != null -> GlucoseConverter.format(autofilledBg, glucoseUnit)
+                else -> "?"
+            }
+            dataStore.bolusBGDisplayedSubtitle.value = when {
+                bolusBgMgdlUserInput != null -> "Entered ($unitAbbrev)"
+                autofilledBg != null -> "CGM ($unitAbbrev)"
+                else -> "BG ($unitAbbrev)"
+            }
+        }
+
+        LaunchedEffect(
+            bolusCalcDataSnapshot.value,
+            bolusCalcLastBG.value,
+            bolusConditionsExcluded.value,
+            bolusUnitsUserInput,
+            bolusCarbsGramsUserInput,
+            bolusBgMgdlUserInput
+        ) {
+            recalculate()
+        }
+
+        LaunchedEffect(Unit) {
+            scalingLazyListState.animateScrollToItem(0)
+        }
+
+        fun performPermissionCheck() {
+            showPermissionCheckDialog = true
+            sendPumpCommands(SendType.BUST_CACHE, listOf(BolusPermissionRequest()))
+        }
+
+        BolusInputPhase(
+            modifier = modifier,
+            scalingLazyListState = scalingLazyListState,
+            focusRequester = focusRequester,
+            dataStore = dataStore,
+            bolusCarbsGramsUserInput = bolusCarbsGramsUserInput,
+            unitAbbrev = unitAbbrev,
+            onClickUnits = onClickUnits,
+            onClickCarbs = onClickCarbs,
+            onClickBG = onClickBG,
+            onContinue = {
+                dataStore.bolusFinalConditions.value =
+                    bolusCalcDecision(dataStore.bolusCalculatorBuilder.value, bolusConditionsExcluded.value)?.conditions
+                val pair = bolusCalcParameters(dataStore.bolusCalculatorBuilder.value, bolusConditionsExcluded.value)
+                dataStore.bolusFinalParameters.value = pair.first
+                dataStore.bolusFinalCalcUnits.value = pair.second
+                performPermissionCheck()
+            },
+            onPromptAcknowledgedClick = {
+                dataStore.bolusConditionsPrompt.value = mutableListOf<BolusCalcCondition>().let { list ->
+                    list.addAll(it)
+                    list
+                }
+                dataStore.bolusConditionsPromptAcknowledged.value = mutableListOf()
+                dataStore.bolusConditionsExcluded.value = mutableSetOf()
+                showBolusConditionPrompt = true
+            }
+        )
+
+        BolusConditionsPromptPhase(
+            showBolusConditionPrompt = showBolusConditionPrompt,
+            onDismiss = { showBolusConditionPrompt = false },
+            dataStore = dataStore,
+            recalculate = ::recalculate,
+            onPromptDone = { showBolusConditionPrompt = false }
+        )
+
+        BolusPermissionCheckPhase(
+            showPermissionCheckDialog = showPermissionCheckDialog,
+            onDismiss = { showPermissionCheckDialog = false },
+            dataStore = dataStore
+        )
+
+        BolusPermissionTransitionPhase(
+            showPermissionCheckDialog = showPermissionCheckDialog,
+            onPermissionAccepted = {
+                showConfirmDialog = true
+                showPermissionCheckDialog = false
+            },
+            dataStore = dataStore
+        )
+
+        fun sendBolusRequestToPhone(bolusParameters: BolusParameters?, unitBreakdown: BolusCalcUnits?, dataSnapshot: BolusCalcDataSnapshotResponse?, timeSinceReset: TimeSinceResetResponse?) {
+            if (bolusParameters == null || dataStore.bolusPermissionResponse.value == null || dataStore.bolusCalcDataSnapshot.value == null || unitBreakdown == null || dataSnapshot == null || timeSinceReset == null) {
+                Timber.w("sendBolusRequestToPhone: null parameters")
+                return
+            }
+
+            val bolusId = dataStore.bolusPermissionResponse.value!!.bolusId
+
+            Timber.i("sendBolusRequestToPhone: sending bolus request to phone: bolusId=$bolusId bolusParameters=$bolusParameters unitBreakdown=$unitBreakdown dataSnapshot=$dataSnapshot timeSinceReset=$timeSinceReset")
+            sendPhoneBolusRequest(bolusId, bolusParameters, unitBreakdown, dataSnapshot, timeSinceReset)
+        }
+
+        BolusConfirmPhase(
+            showConfirmDialog = showConfirmDialog,
+            onDismiss = { showConfirmDialog = false },
+            onReject = {
+                showConfirmDialog = false
+                dataStore.bolusFinalConditions.value = null
+                dataStore.bolusFinalParameters.value = null
+            },
+            onConfirm = {
+                showConfirmDialog = false
+                showInProgressDialog = true
+                sendBolusRequestToPhone(
+                    dataStore.bolusFinalParameters.value,
+                    dataStore.bolusFinalCalcUnits.value,
+                    dataStore.bolusCalcDataSnapshot.value,
+                    dataStore.timeSinceResetResponse.value,
+                )
+            },
+            dataStore = dataStore
+        )
+
+        fun cancelBolus() {
+            fun performCancel() {
+                dataStore.bolusPermissionResponse.value?.bolusId?.let { bolusId ->
+                    sendPumpCommands(SendType.BUST_CACHE, listOf(CancelBolusRequest(bolusId)))
+                }
+            }
+            showCancellingDialog = true
+            refreshScope.launch {
+                var time = 0
+                while (dataStore.bolusCancelResponse.value == null) {
+                    if (time >= 5000) {
+                        performCancel()
+                        time = 0
+                    }
+                    delay(100)
+                    time += 100
+                }
+                showCancellingDialog = false
+                showCancelledDialog = true
+                dataStore.bolusFinalConditions.value = null
+                dataStore.bolusFinalParameters.value = null
+                resetSavedBolusEnteredState()
+                sendPhoneBolusCancel()
+            }
+        }
+
+        BolusCancellingPhase(
+            showCancellingDialog = showCancellingDialog,
+            onDismiss = { showCancellingDialog = false },
+            onCancelled = { showCancelledDialog = true },
+            dataStore = dataStore
+        )
+
+        BolusCancelledPhase(
+            showCancelledDialog = showCancelledDialog,
+            onDismiss = {
+                showCancelledDialog = false
+                resetBolusDataStoreState(dataStore)
+                onClickLanding()
+            },
+            onAcknowledge = {
+                onClickLanding()
+                resetBolusDataStoreState(dataStore)
+            },
+            dataStore = dataStore,
+            refreshScope = refreshScope,
+            sendPumpCommands = sendPumpCommands
+        )
+
+        BolusInProgressPhase(
+            showInProgressDialog = showInProgressDialog,
+            onDismiss = { showInProgressDialog = false },
+            onCancel = { cancelBolus() },
+            onApproved = { showApprovedDialog = true },
+            onCancelled = { showCancelledDialog = true },
+            dataStore = dataStore
+        )
+
+        BolusApprovedPhase(
+            showApprovedDialog = showApprovedDialog,
+            onDismiss = {
+                showApprovedDialog = false
+                resetBolusDataStoreState(dataStore)
+                resetSavedBolusEnteredState()
+                onClickLanding()
+            },
+            onCancel = { cancelBolus() },
+            dataStore = dataStore,
+            refreshScope = refreshScope,
+            sendPumpCommands = sendPumpCommands
+        )
+    }
+}
+
+
+
+fun resetBolusDataStoreState(dataStore: DataStore) {
+    dataStore.bolusCalcDataSnapshot.value = null
+    dataStore.bolusCalcLastBG.value = null
+    dataStore.bolusPermissionResponse.value = null
+    dataStore.bolusCancelResponse.value = null
+    dataStore.bolusInitiateResponse.value = null
+    dataStore.lastBolusStatusResponse.value = null
+    dataStore.bolusCalculatorBuilder.value = null
+    dataStore.bolusCurrentParameters.value = null
+    dataStore.bolusCurrentConditions.value = null
+    dataStore.bolusConditionsPrompt.value = null
+    dataStore.bolusConditionsPromptAcknowledged.value = null
+    dataStore.bolusConditionsExcluded.value = null
+    dataStore.bolusFinalParameters.value = null
+    dataStore.bolusFinalCalcUnits.value = null
+    dataStore.bolusFinalConditions.value = null
+}
+
+
+@Preview(
+    apiLevel = 28,
+    uiMode = Configuration.UI_MODE_TYPE_WATCH,
+    device = Devices.WEAR_OS_LARGE_ROUND,
+)
+@Composable
+fun EmptyPreview() {
+    dataStore.bolusUnitsDisplayedText.value = "0.00u"
+    dataStore.bolusConditionsPromptAcknowledged.value = mutableListOf()
+    BolusScreen(
+        scalingLazyListState = ScalingLazyListState(0, 0),
+        focusRequester = FocusRequester(),
+        bolusUnitsUserInput = 0.0,
+        bolusCarbsGramsUserInput = 0,
+        bolusBgMgdlUserInput = 0,
+        onClickUnits = {},
+        onClickCarbs = { },
+        onClickBG = { },
+        onClickLanding = { },
+        sendPumpCommands = { _, _ -> },
+        sendPhoneBolusRequest = { _, _, _, _, _ -> },
+        resetSavedBolusEnteredState = {},
+        sendPhoneBolusCancel = {}
+    )
+}
+
+@Preview(
+    apiLevel = 28,
+    uiMode = Configuration.UI_MODE_TYPE_WATCH,
+    device = Devices.WEAR_OS_LARGE_ROUND,
+)
+@Composable
+fun ConditionAcknowledgedPreview() {
+    dataStore.bolusConditionsPromptAcknowledged.value = mutableListOf(BolusCalcCondition.POSITIVE_BG_CORRECTION)
+    BolusScreen(
+        scalingLazyListState = ScalingLazyListState(0, 0),
+        focusRequester = FocusRequester(),
+        bolusUnitsUserInput = 0.0,
+        bolusCarbsGramsUserInput = 0,
+        bolusBgMgdlUserInput = 0,
+        onClickUnits = {},
+        onClickCarbs = { },
+        onClickBG = { },
+        onClickLanding = { },
+        sendPumpCommands = { _, _ -> },
+        sendPhoneBolusRequest = { _, _, _, _, _ -> },
+        resetSavedBolusEnteredState = {},
+        sendPhoneBolusCancel = {}
+    )
+}
