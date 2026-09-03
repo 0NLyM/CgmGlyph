@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'it.mattia.glucoseglyph.glyph'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 35
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+dependencies {
+    // Nothing Phone Glyph Matrix SDK -- local aar, no Maven distribution.
+    implementation files('libs/glyphsdk_0606.aar')
+
+    // Only the typed pump message classes are needed here (PumpMessageBridge matches on
+    // response types), not the BLE/Android connection layer pumpcomm already owns.
+    if (project.use_local_pumpx2) {
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-messages/${project.pumpx2_version}/pumpx2-messages-${project.pumpx2_version}.jar")
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-shared/${project.pumpx2_version}/pumpx2-shared-${project.pumpx2_version}.jar")
+    } else {
+        implementation "com.github.jwoglom.pumpX2:pumpx2-messages:v${project.pumpx2_version}"
+        implementation "com.github.jwoglom.pumpX2:pumpx2-shared:v${project.pumpx2_version}"
+    }
+
+    testImplementation 'junit:junit:4.13.2'
+}

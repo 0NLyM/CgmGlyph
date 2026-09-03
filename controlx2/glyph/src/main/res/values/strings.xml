@@ -1,0 +1,4 @@
+<resources>
+    <string name="glyph_toy_name">Glucosio</string>
+    <string name="glyph_toy_summary">Mostra il valore del glucosio dal CGM sul Glyph Matrix.</string>
+</resources>

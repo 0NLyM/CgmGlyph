@@ -22,6 +22,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Required to draw on the Nothing Phone 3's rear Glyph Matrix (Glyph Toy) -->
+    <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
+
     <!--
         Package visibility for targeted broadcasts to xDrip+ (see
         :db's XdripBroadcastSender). Android 11+ requires the sender
@@ -97,6 +100,38 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
             android:icon="@drawable/pump">
+        </service>
+
+        <!-- Nothing Glyph Matrix developer key (works for local/sideloaded builds) -->
+        <meta-data
+            android:name="NothingKey"
+            android:value="test" />
+
+        <!-- Glyph Toy: draws the live CGM reading on the Phone (3) rear matrix, fed directly by
+             PumpMessageBridge off CommService's own BLE message stream -- no HTTP involved. -->
+        <service
+            android:name="it.mattia.glucoseglyph.glyph.GlucoseToyService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.nothing.glyph.TOY" />
+            </intent-filter>
+
+            <meta-data
+                android:name="com.nothing.glyph.toy.name"
+                android:resource="@string/glyph_toy_name" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.image"
+                android:resource="@drawable/toy_thumbnail" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.summary"
+                android:resource="@string/glyph_toy_summary" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.longpress"
+                android:value="1" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
+                android:value="1" />
         </service>
 
         <receiver

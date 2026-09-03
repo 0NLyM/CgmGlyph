@@ -116,6 +116,7 @@ dependencies {
     implementation project(path: ':pumpcomm')
     implementation project(path: ':clientcomm')
     implementation project(path: ':db')
+    implementation project(path: ':glyph')
 
     // pumpx2-android dependencies
     implementation 'com.github.weliem:blessed-android:2.4.0'

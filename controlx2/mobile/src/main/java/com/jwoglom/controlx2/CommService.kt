@@ -495,6 +495,8 @@ class CommService : Service(), CommServiceCallbacks {
     // --- Debug API callbacks ---
     override fun onPumpMessageReceived(message: com.jwoglom.pumpx2.pump.messages.Message, source: SendType) {
         httpDebugApiService?.onPumpMessageReceived(message, source = source)
+        // Feeds the Glyph Toy the same live message stream, in-process -- see PumpMessageBridge.
+        it.mattia.glucoseglyph.bridge.PumpMessageBridge.onPumpMessageReceived(message)
     }
 
     override fun onPumpCriticalError(error: TandemError, source: SendType) {
