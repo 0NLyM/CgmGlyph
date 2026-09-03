@@ -45,6 +45,10 @@ class ShakeDetector(context: Context, private val onShake: () -> Unit) {
 
     private companion object {
         const val SHAKE_THRESHOLD_G = 2.2
-        const val COOLDOWN_MS = 1000L
+        // Short enough that two deliberate, distinct shakes close together (a "double shake") both
+        // come through as separate callbacks -- GlucoseToyService does its own timing on top of
+        // this to tell a single shake from a double one; this cooldown only debounces one
+        // continuous shaking motion from firing repeatedly.
+        const val COOLDOWN_MS = 400L
     }
 }

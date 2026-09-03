@@ -5,11 +5,12 @@ import com.nothing.ketchum.GlyphMatrixManager
 
 /**
  * A small "thank you for using the app" surprise: a pixel heart that fades in, gives a couple of
- * heartbeat pulses (fitting, for a glucose app), then fades back out. Triggered by holding the
- * Glyph button well past the long-press threshold that already toggles mg/dL<->mmol/L (see
- * GlucoseToyService) -- deliberately just brightness steps on one static shape, the same
+ * heartbeat pulses (fitting, for a glucose app), then fades back out. Triggered by a double shake
+ * (see GlucoseToyService) -- deliberately just brightness steps on one static shape, the same
  * "brightness is the only expressive dimension" approach MatrixRenderer itself uses, so it needs
- * no new drawing primitives.
+ * no new drawing primitives. Kept to a modest number of frames, spaced well apart, rather than a
+ * smoother-but-denser sequence -- setMatrixFrame is an IPC call to the Glyph service, and firing
+ * it in a tight burst was suspected of destabilizing that service on real hardware.
  */
 object HeartbeatEasterEgg {
     private const val SIZE = MatrixRenderer.SIZE
@@ -28,12 +29,13 @@ object HeartbeatEasterEgg {
     // (brightness, hold-ms-before-next-frame) pairs, played in order.
     private val sequence: List<Pair<Int, Long>> = buildList {
         // Fade in.
-        for (b in listOf(0, 400, 900, 1500, 2200, 3000, FULL_BRIGHTNESS)) add(b to 90L)
-        // Heartbeat: lub-dub, lub-dub.
-        for (b in listOf(1800, FULL_BRIGHTNESS, 1200, FULL_BRIGHTNESS)) add(b to 90L)
-        add(FULL_BRIGHTNESS to 300L)
+        for (b in listOf(0, 1200, 2600, FULL_BRIGHTNESS)) add(b to 150L)
+        // Heartbeat: lub-dub.
+        add(1600 to 150L)
+        add(FULL_BRIGHTNESS to 150L)
+        add(FULL_BRIGHTNESS to 350L)
         // Fade out.
-        for (b in listOf(3000, 2200, 1500, 900, 400, 0)) add(b to 90L)
+        for (b in listOf(2600, 1200, 0)) add(b to 150L)
     }
 
     private fun frame(brightness: Int): IntArray {
