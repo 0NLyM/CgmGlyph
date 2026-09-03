@@ -19,7 +19,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.jwoglom.controlx2"
+        applicationId "com.0nlym.controlx2glyph"
         minSdk 26
         targetSdk 35
         versionCode 1
