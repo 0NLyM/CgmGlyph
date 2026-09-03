@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" android:minSdkVersion="34" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
+    <!-- BT permissions for watch pump-host mode (Phase 4: Role-Switching) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <!--
+        Package visibility for targeted broadcasts to xDrip+ (see
+        :db's XdripBroadcastSender). Android 11+ requires the sender
+        to declare a <queries> entry before `intent.package = "..."`
+        will deliver; without this the broadcast is silently dropped.
+        The xDrip+ receiver availability on Wear OS is still unverified,
+        but we shouldn't be the ones blocking it.
+    -->
+    <queries>
+        <package android:name="com.eveningoutpost.dexdrip" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/pump"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/SplashTheme"
+        android:debuggable="true"
+        android:foregroundServiceType="connectedDevice"
+        tools:ignore="HardcodedDebugMode">
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="true" />
+
+        <!--
+               Set to true if your app is Standalone, that is, it does not require the handheld
+               app to run.
+        -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:icon="@drawable/pump"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".BolusActivity"
+            android:icon="@drawable/pump_bolus"
+            android:exported="true"
+            android:label="Bolus">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".PhoneCommService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"
+            android:icon="@drawable/pump">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/to-wear" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".WearPumpCommService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"
+            android:icon="@drawable/pump">
+        </service>
+
+        <service
+            android:name=".complications.PumpBatteryComplicationDataSourceService"
+            android:exported="true"
+            android:icon="@drawable/pump"
+            android:label="ControlX2 Pump Battery"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="RANGED_VALUE,SHORT_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="600" /> <!-- 10 minutes -->
+        </service>
+
+        <service
+            android:name=".complications.PumpIOBComplicationDataSourceService"
+            android:exported="true"
+            android:icon="@drawable/pump"
+            android:label="ControlX2 Pump IOB"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="RANGED_VALUE,SHORT_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="301" /> <!-- 5 minutes -->
+        </service>
+
+        <service
+            android:name=".complications.CGMReadingComplicationDataSourceService"
+            android:exported="true"
+            android:icon="@drawable/pump"
+            android:label="ControlX2 CGM Reading"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="RANGED_VALUE,SHORT_TEXT" />
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="301" /> <!-- 5 minutes -->
+        </service>
+
+        <service
+            android:name=".complications.BolusButtonComplicationDataSourceService"
+            android:exported="true"
+            android:icon="@drawable/bolus_icon"
+            android:label="ControlX2 Bolus Button"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SMALL_IMAGE,MONOCHROMATIC_IMAGE,ICON" />
+        </service>
+
+        <service
+            android:name=".complications.PumpButtonComplicationDataSourceService"
+            android:exported="true"
+            android:icon="@drawable/pump"
+            android:label="ControlX2 App Button"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SMALL_IMAGE,MONOCHROMATIC_IMAGE,ICON" />
+        </service>
+    </application>
+
+</manifest>

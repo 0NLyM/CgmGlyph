@@ -1,0 +1,210 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'hu.supercluster.paperwork'
+    id 'io.github.takahirom.roborazzi'
+}
+
+android {
+    signingConfigs {
+        release {
+            storeFile file(System.properties.getOrDefault('RELEASE_STORE_FILE', '../debug.keystore'))
+            storePassword System.properties.getOrDefault('RELEASE_STORE_PASSWORD', 'password')
+            keyAlias System.properties.getOrDefault('RELEASE_KEY_ALIAS', 'alias_name')
+            keyPassword System.properties.getOrDefault('RELEASE_KEY_PASSWORD', 'password')
+        }
+    }
+    namespace 'com.jwoglom.controlx2'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.jwoglom.controlx2"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "${project.controlx2_version}"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+    packaging {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+            all {
+                def isRoborazziTask = project.gradle.startParameter.taskNames.any { it.toLowerCase().contains('roborazzi') }
+                jvmArgs '-noverify'
+                maxHeapSize = '4g'
+                systemProperty 'robolectric.pixelCopyRenderMode', 'hardware'
+                // Snapshot tests are only run for Roborazzi tasks.
+                if (!isRoborazziTask) {
+                    exclude '**/snapshots/**'
+                } else {
+                    include '**/snapshots/**'
+                }
+                // Exclude bcprov-jdk14 from unit test classpath to avoid
+                // BouncyCastle JAR signer conflict with Robolectric's
+                // android-all framework JAR (which bundles its own BC).
+                // bcprov-jdk18on is added as testImplementation to provide
+                // BouncyCastle classes without the JAR signer conflict.
+                classpath = classpath.filter { !it.name.startsWith('bcprov-jdk14') }
+                if (System.getenv('CI') == 'true') {
+                    systemProperty 'robolectric.offline', 'true'
+                    systemProperty 'robolectric.dependency.dir', "${System.getProperty('user.home')}/.robolectric"
+                }
+            }
+        }
+    }
+}
+
+// Roborazzi preview tests are defined manually in
+// src/test/java/.../snapshots/ComposePreviewSnapshotTests.kt
+
+paperwork {
+    set = [
+        build_time: buildTime("yyyy-MM-dd HH:mm:ss", "UTC"),
+        build_version: gitInfo()
+    ]
+}
+
+dependencies {
+    implementation 'hu.supercluster:paperwork:1.2.7'
+
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'com.google.android.material:material:1.7.0'
+
+    // Wear OS support with runtime auto-detection
+    // MessageBusFactory will detect at runtime if Wear OS is available/connected
+    // Falls back to LocalMessageBus for phone-only mode when no watch is present
+    implementation 'com.google.android.gms:play-services-wearable:18.0.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3'
+
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.android.volley:volley:1.2.1'
+
+    implementation project(path: ':shared')
+    implementation project(path: ':pumpcomm')
+    implementation project(path: ':clientcomm')
+    implementation project(path: ':db')
+
+    // pumpx2-android dependencies
+    implementation 'com.github.weliem:blessed-android:2.4.0'
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+    implementation "me.champeau.openbeans:openbeans:1.0.2"
+    implementation "commons-codec:commons-codec:1.18.0"
+    implementation "org.apache.commons:commons-lang3:3.17.0"
+    implementation "com.google.guava:guava:33.3.1-android"
+    implementation 'org.bouncycastle:bcprov-jdk14:1.77'
+
+    // pumpx2
+    if (project.use_local_pumpx2) {
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-android/${project.pumpx2_version}/pumpx2-android-${project.pumpx2_version}.aar")
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-messages/${project.pumpx2_version}/pumpx2-messages-${project.pumpx2_version}.jar")
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-shared/${project.pumpx2_version}/pumpx2-shared-${project.pumpx2_version}.jar")
+    } else {
+        implementation "com.github.jwoglom.pumpX2:pumpx2-android:v${project.pumpx2_version}"
+        implementation "com.github.jwoglom.pumpX2:pumpx2-messages:v${project.pumpx2_version}"
+        implementation "com.github.jwoglom.pumpX2:pumpx2-shared:v${project.pumpx2_version}"
+    }
+
+    var lifecycle_version = '2.8.7'
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.material:material-icons-extended:$compose_version"
+    var material3_version = '1.3.1'
+    implementation "androidx.compose.material3:material3:$material3_version"
+    implementation "androidx.compose.material3:material3-android:$material3_version"
+    implementation 'androidx.navigation:navigation-compose:2.8.8'
+    implementation 'androidx.navigation:navigation-runtime-ktx:2.8.8'
+    implementation 'androidx.compose.material:material:1.7.8'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.7.8'
+
+    // charts
+    implementation("com.patrykandpatrick.vico:compose:2.3.6")
+    implementation("com.patrykandpatrick.vico:compose-m3:2.3.6")
+    implementation("com.patrykandpatrick.vico:core:2.3.6")
+    // in the future, if using fork from https://github.com/jwoglom/vico
+    // implementation("com.github.jwoglom.vico:compose:$vico_version")
+    // implementation("com.github.jwoglom.vico:compose-m3:$vico_version")
+    // implementation("com.github.jwoglom.vico:core:$vico_version")
+
+
+    // https://issuetracker.google.com/issues/227767363
+    debugImplementation "androidx.customview:customview:1.2.0-alpha02"
+    debugImplementation "androidx.customview:customview-poolingcontainer:1.0.0"
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.test.ext:junit:1.2.1'
+    testImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+    testImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+    testImplementation 'androidx.activity:activity-ktx:1.10.1'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'androidx.test:runner:1.6.2'
+    testImplementation 'io.mockk:mockk:1.13.13'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+
+    // Room comes transitively from :db (which exposes room-runtime as api).
+    // The only direct Room usage in mobile is HistoryLogFetcherIntegrationTest
+    // calling Room.inMemoryDatabaseBuilder, satisfied by that transitive dep.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // SLF4J (pumpx2 library uses it)
+    testImplementation 'org.slf4j:slf4j-api:2.0.16'
+    testImplementation 'org.slf4j:slf4j-simple:2.0.16'
+
+    // Roborazzi snapshot testing
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi:1.58.0'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi-compose:1.58.0'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi-junit-rule:1.58.0'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi-compose-preview-scanner-support:1.58.0'
+    testImplementation 'io.github.sergio-sastre.ComposablePreviewScanner:android:0.8.1'
+
+    // HTTP server for debug API
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    
+    // Note: wearApp embedding was removed in AGP 9.0
+    // Wear OS apps must be distributed separately via Play Store
+    // See: https://developer.android.com/distribute/best-practices/launch/distribute-wear
+}
