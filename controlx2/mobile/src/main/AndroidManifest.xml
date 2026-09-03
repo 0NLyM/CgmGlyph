@@ -108,7 +108,7 @@
             android:value="test" />
 
         <!-- Glyph Toy: draws the live CGM reading on the Phone (3) rear matrix, fed directly by
-             PumpMessageBridge off CommService's own BLE message stream -- no HTTP involved. -->
+             PumpMessageBridge off CommService's own BLE message stream, no HTTP involved. -->
         <service
             android:name="it.mattia.glucoseglyph.glyph.GlucoseToyService"
             android:exported="true"
