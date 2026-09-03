@@ -24,11 +24,8 @@ import it.mattia.glucoseglyph.model.currentBatteryPercent
  *  - shaking the phone cycles [ToyDisplayMode] -- glucose (default) -> pump battery -> reservoir
  *    units -> sensor days remaining and back -- and a display mode other than glucose reverts to
  *    glucose on its own after [REVERT_TO_GLUCOSE_MS] of no further shake;
- *  - the Glyph button's long press tells two holds apart purely from event timestamps (the SDK
- *    only offers "long press was reached" and "released" as discrete signals, not a live
- *    duration while still held, so no continuous "charging up" readout is possible): released
- *    soon after the long-press threshold toggles mg/dL<->mmol/L, same as before; released only
- *    after holding substantially longer plays the heartbeat easter egg instead.
+ *  - the Glyph button's normal long press plays the heartbeat easter egg. mg/dL<->mmol/L is set
+ *    from the app's own screen instead -- the toy no longer has a gesture free for it.
  */
 class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
 
@@ -44,11 +41,6 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     private val shakeDetector by lazy { ShakeDetector(this) { onShake() } }
     private var displayMode = ToyDisplayMode.GLUCOSE
     private var easterEggPlaying = false
-
-    // Set only when onTouchPointLongPress actually fires -- 0 means "this release wasn't preceded
-    // by a long press" (e.g. a plain press the system already handled itself), in which case
-    // onTouchPointReleased does nothing at all.
-    private var longPressStartMillis = 0L
 
     private val revertToGlucoseRunnable = Runnable {
         displayMode = ToyDisplayMode.GLUCOSE
@@ -74,19 +66,7 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
     }
 
     override fun onTouchPointLongPress() {
-        longPressStartMillis = System.currentTimeMillis()
-    }
-
-    override fun onTouchPointReleased() {
-        val startedAt = longPressStartMillis
-        longPressStartMillis = 0L
-        if (startedAt == 0L) return
-        if (System.currentTimeMillis() - startedAt >= EASTER_EGG_EXTRA_HOLD_MS) {
-            playEasterEgg()
-        } else {
-            settings.useMmol = !settings.useMmol
-            redraw()
-        }
+        playEasterEgg()
     }
 
     private fun onShake() {
@@ -141,9 +121,5 @@ class GlucoseToyService : GlyphMatrixServiceBase("Glucose-Toy") {
         const val TAG = "GlucoseToyService"
         const val CLOCK_TICK_MS = 30_000L
         const val REVERT_TO_GLUCOSE_MS = 15_000L
-        // How much longer than the SDK's own long-press threshold you need to keep holding,
-        // measured from onTouchPointLongPress to onTouchPointReleased, for it to count as "held
-        // long enough" for the easter egg instead of the unit toggle.
-        const val EASTER_EGG_EXTRA_HOLD_MS = 1200L
     }
 }
