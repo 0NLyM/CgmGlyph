@@ -5,8 +5,9 @@ import com.nothing.ketchum.GlyphMatrixManager
 
 /**
  * A small "thank you for using the app" surprise: a pixel heart that fades in, gives a couple of
- * heartbeat pulses (fitting, for a glucose app), then fades back out. Triggered by a double shake
- * (see GlucoseToyService) -- deliberately just brightness steps on one static shape, the same
+ * heartbeat pulses (fitting, for a glucose app), then fades back out. Triggered by holding the
+ * Glyph button noticeably longer than its normal long press (see GlucoseToyService) --
+ * deliberately just brightness steps on one static shape, the same
  * "brightness is the only expressive dimension" approach MatrixRenderer itself uses, so it needs
  * no new drawing primitives. Kept to a modest number of frames, spaced well apart, rather than a
  * smoother-but-denser sequence -- setMatrixFrame is an IPC call to the Glyph service, and firing
