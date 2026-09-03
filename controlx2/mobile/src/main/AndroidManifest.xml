@@ -26,6 +26,15 @@
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
 
     <!--
+        The Nothing Glyph Matrix SDK declares minSdk 34, above this app's own minSdk 26
+        (ControlX2 supports a much wider range of phones/pumps than just the Nothing Phone 3).
+        Overriding is safe here: the Glyph Toy service is only ever bound by the Nothing OS's
+        own Glyph Toy carousel, which doesn't exist below API 34, so no path on an older
+        device ever reaches this code, regardless of what the manifest declares.
+    -->
+    <uses-sdk tools:overrideLibrary="com.nothing.ketchum" />
+
+    <!--
         Package visibility for targeted broadcasts to xDrip+ (see
         :db's XdripBroadcastSender). Android 11+ requires the sender
         to declare a <queries> entry before `intent.package = "..."`
