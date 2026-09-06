@@ -79,6 +79,7 @@ import com.jwoglom.controlx2.presentation.screens.sections.CGMActions
 import com.jwoglom.controlx2.presentation.screens.sections.CartridgeActions
 import com.jwoglom.controlx2.presentation.screens.sections.ControlIQSettingsActions
 import com.jwoglom.controlx2.presentation.screens.sections.FeatureFlags
+import com.jwoglom.controlx2.presentation.screens.sections.GlyphSettings
 import com.jwoglom.controlx2.presentation.screens.sections.Dashboard
 import com.jwoglom.controlx2.presentation.screens.sections.Debug
 import com.jwoglom.controlx2.presentation.screens.sections.Notifications
@@ -467,6 +468,9 @@ fun Landing(
                                 },
                                 navigateToXdripSettings = {
                                     selectedItem = LandingSection.XDRIP_SETTINGS
+                                },
+                                navigateToGlyphSettings = {
+                                    selectedItem = LandingSection.GLYPH_SETTINGS
                                 }
                             )
                         }
@@ -482,6 +486,12 @@ fun Landing(
                                 innerPadding = innerPadding,
                                 navController = navController,
                                 sendMessage = sendMessage
+                            )
+                        }
+                        LandingSection.GLYPH_SETTINGS -> {
+                            GlyphSettings(
+                                innerPadding = innerPadding,
+                                navController = navController,
                             )
                         }
                     }
@@ -587,6 +597,7 @@ enum class LandingSection(val label: String, val icon: ImageVector, val showInNa
     DEBUG("Settings", Icons.Filled.Settings, false),
     NIGHTSCOUT_SETTINGS("Settings", Icons.Filled.Settings, false),
     XDRIP_SETTINGS("Settings", Icons.Filled.Settings, false),
+    GLYPH_SETTINGS("Settings", Icons.Filled.Settings, false),
     FEATURE_FLAGS("Settings", Icons.Filled.Settings, false),
     ;
 }

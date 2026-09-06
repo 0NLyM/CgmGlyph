@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -89,7 +90,8 @@ fun Settings(
     sendPumpCommands: (SendType, List<Message>) -> Unit,
     navigateToDebugOptions: () -> Unit = {},
     navigateToNightscoutSettings: () -> Unit = {},
-    navigateToXdripSettings: () -> Unit = {}
+    navigateToXdripSettings: () -> Unit = {},
+    navigateToGlyphSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -338,6 +340,23 @@ fun Settings(
                     },
                     modifier = Modifier.clickable {
                         navigateToXdripSettings()
+                    }
+                )
+                Divider()
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Glyph Toy") },
+                    supportingContent = { Text("Personalizza lo stile e le impostazioni del Glyph Toy.") },
+                    leadingContent = {
+                        Icon(
+                            Icons.Filled.Widgets,
+                            contentDescription = "Glyph Toy icon",
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        navigateToGlyphSettings()
                     }
                 )
                 Divider()
