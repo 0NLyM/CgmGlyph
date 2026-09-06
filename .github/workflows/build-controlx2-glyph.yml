@@ -34,25 +34,28 @@ jobs:
       - name: Create local.properties
         run: touch local.properties
 
-      # Debug builds sign with the Android Gradle Plugin's own auto-generated debug
-      # keystore -- no secrets needed, unlike the release build upstream's own CI does.
+      # Release builds sign with the committed debug.keystore (storepass "password",
+      # alias "alias_name") so every CI run produces an APK signed by the same key --
+      # a consistent key is what lets Android upgrade the installed app rather than
+      # refusing with INSTALL_FAILED_UPDATE_INCOMPATIBLE. The credentials are baked into
+      # mobile/build.gradle's signingConfigs.release defaults; no GitHub Secrets needed.
       # glyphBuildNumber feeds into controlx2_version (root build.gradle) so the version
       # string shown in the app's own Settings screen carries this same run number.
-      - name: Build debug APK
-        run: ./gradlew :mobile:assembleDebug --stacktrace -PglyphBuildNumber=${{ github.run_number }}
+      - name: Build release APK
+        run: ./gradlew :mobile:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: controlx2-glyph-debug-apk
-          path: controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk
+          path: controlx2/mobile/build/outputs/apk/release/mobile-release.apk
           if-no-files-found: error
 
       # Actions artifacts need a GitHub login and come back as a zip -- awkward from a
       # phone. A Release asset downloads directly (no login, no unzipping).
       - name: Rename APK for release
         working-directory: . # override the job's controlx2/ default: both paths below are repo-root-relative
-        run: cp controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk controlx2-glyph-debug.apk
+        run: cp controlx2/mobile/build/outputs/apk/release/mobile-release.apk controlx2-glyph-debug.apk
 
       # Each push gets its own tagged release (build number in both the tag and the title,
       # matching the "-glyph.N" suffix the app's Settings screen shows) instead of overwriting
