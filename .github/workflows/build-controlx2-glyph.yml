@@ -62,6 +62,6 @@ jobs:
           body: |
             APK di debug, non firmato per il Play Store (installazione diretta/sideload).
             Build automatica dal branch `controlx2-glyph`, commit ${{ github.sha }}.
-          prerelease: true
-          make_latest: false
+          prerelease: false
+          make_latest: true
           files: controlx2-glyph-debug.apk
