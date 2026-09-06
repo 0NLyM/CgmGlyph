@@ -36,8 +36,10 @@ jobs:
 
       # Debug builds sign with the Android Gradle Plugin's own auto-generated debug
       # keystore -- no secrets needed, unlike the release build upstream's own CI does.
+      # glyphBuildNumber feeds into controlx2_version (root build.gradle) so the version
+      # string shown in the app's own Settings screen carries this same run number.
       - name: Build debug APK
-        run: ./gradlew :mobile:assembleDebug --stacktrace
+        run: ./gradlew :mobile:assembleDebug --stacktrace -PglyphBuildNumber=${{ github.run_number }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -47,21 +49,27 @@ jobs:
           if-no-files-found: error
 
       # Actions artifacts need a GitHub login and come back as a zip -- awkward from a
-      # phone. A Release asset downloads directly (no login, no unzipping) and this reuses
-      # one fixed tag so the link stays the same across every push instead of scattering a
-      # new URL per build.
+      # phone. A Release asset downloads directly (no login, no unzipping).
       - name: Rename APK for release
         working-directory: . # override the job's controlx2/ default: both paths below are repo-root-relative
         run: cp controlx2/mobile/build/outputs/apk/debug/mobile-debug.apk controlx2-glyph-debug.apk
 
-      - name: Publish rolling release
+      # Each push gets its own tagged release (build number in both the tag and the title,
+      # matching the "-glyph.N" suffix the app's Settings screen shows) instead of overwriting
+      # one fixed tag -- so old builds stay in the release history and you can always tell which
+      # one you're looking at. make_latest keeps this one flagged as the repo's current release,
+      # and since the asset filename never changes, the permanent GitHub URL
+      # .../releases/latest/download/controlx2-glyph-debug.apk always resolves to whichever
+      # build is newest without needing to be updated here.
+      - name: Publish versioned release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: controlx2-glyph-latest
-          name: "ControlX2 Glyph (latest debug build)"
+          tag_name: controlx2-glyph-v${{ github.run_number }}
+          name: "ControlX2 Glyph build #${{ github.run_number }}"
           body: |
             APK di debug, non firmato per il Play Store (installazione diretta/sideload).
             Build automatica dal branch `controlx2-glyph`, commit ${{ github.sha }}.
+            La versione mostrata in Impostazioni nell'app sarà `1.0.0-20260504-glyph.${{ github.run_number }}`.
           prerelease: false
           make_latest: true
           files: controlx2-glyph-debug.apk

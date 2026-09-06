@@ -1,7 +1,11 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
     ext {
-        controlx2_version = "1.0.0-20260504"
+        // CI passes -PglyphBuildNumber=<GitHub Actions run number> so the version shown in the
+        // app's own Settings screen matches the number in the GitHub release it came from --
+        // otherwise there's no way to tell from the phone alone whether a sideloaded APK is
+        // actually the latest build. Untouched for a plain local/upstream build.
+        controlx2_version = "1.0.0-20260504" + (project.hasProperty('glyphBuildNumber') ? "-glyph.${project.property('glyphBuildNumber')}" : "")
         pumpx2_version = "1.9.0"
         use_local_pumpx2 = System.properties.getOrDefault('use_local_pumpx2', 'false') == 'true'
         if (!use_local_pumpx2) {
