@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.jwoglom.controlx2", appContext.packageName)
+        assertEquals("com.onlym.controlx2glyph", appContext.packageName)
     }
 }

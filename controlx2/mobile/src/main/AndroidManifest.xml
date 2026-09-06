@@ -72,7 +72,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="com_jwoglom_controlx2"
+                    android:scheme="com_onlym_controlx2glyph"
                     android:host="controlx2"
                     android:pathPrefix="/" />
             </intent-filter>
@@ -155,7 +155,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.jwoglom.controlx2"
+            android:authorities="${applicationId}"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
