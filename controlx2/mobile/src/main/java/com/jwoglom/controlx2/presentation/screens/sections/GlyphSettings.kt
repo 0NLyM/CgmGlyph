@@ -2,6 +2,7 @@
 
 package com.jwoglom.controlx2.presentation.screens.sections
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
@@ -22,6 +24,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -31,13 +34,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.jwoglom.controlx2.presentation.components.HeaderLine
 import it.mattia.glucoseglyph.glyph.PixelFont
 import it.mattia.glucoseglyph.model.AppSettings
+import it.mattia.glucoseglyph.model.Trend
 
 private val SENSOR_DURATION_OPTIONS = listOf(7, 10, 14, 15, 21)
 
@@ -159,6 +166,7 @@ fun GlyphSettings(
             options = PixelFont.ArrowStyle.entries.filter { it in PixelFont.arrowSets },
             selected = arrowStyle,
             label = { it.label },
+            preview = { PixelFont.arrowSets[it]?.get(Trend.FLAT) ?: emptyList() },
             onSelect = {
                 arrowStyle = it
                 settings.arrowStyle = it
@@ -172,6 +180,7 @@ fun GlyphSettings(
             options = PixelFont.DigitStyle.entries.filter { it in PixelFont.clockDigitSets },
             selected = clockDigitStyle,
             label = { it.label },
+            preview = { PixelFont.clockDigitSets[it]?.glyphs?.get('8') ?: emptyList() },
             onSelect = {
                 clockDigitStyle = it
                 settings.clockDigitStyle = it
@@ -185,6 +194,7 @@ fun GlyphSettings(
             options = PixelFont.DigitStyle.entries.filter { it in PixelFont.valueDigitSets },
             selected = valueDigitStyle,
             label = { it.label },
+            preview = { PixelFont.valueDigitSets[it]?.glyphs?.get('8') ?: emptyList() },
             onSelect = {
                 valueDigitStyle = it
                 settings.valueDigitStyle = it
@@ -207,12 +217,41 @@ fun GlyphSettings(
     }
 }
 
+/** Renders a PixelFont pattern (list of "0110…" row strings) as a small lit-pixel grid,
+ *  scaled so each lit cell is 4dp wide with 1dp gaps between cells. */
+@Composable
+private fun PixelGridPreview(pattern: List<String>, modifier: Modifier = Modifier) {
+    val cellDp = 4.dp
+    val gapDp = 1.dp
+    val rows = pattern.size
+    val cols = pattern.maxOfOrNull { it.length } ?: 0
+    val width = cellDp * cols + gapDp * maxOf(0, cols - 1)
+    val height = cellDp * rows + gapDp * maxOf(0, rows - 1)
+    val litColor = MaterialTheme.colorScheme.onSurface
+    Canvas(modifier = modifier.size(width, height)) {
+        val cellPx = cellDp.toPx()
+        val gapPx = gapDp.toPx()
+        pattern.forEachIndexed { row, line ->
+            line.forEachIndexed { col, c ->
+                if (c == '1') {
+                    drawRect(
+                        color = litColor,
+                        topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
+                        size = Size(cellPx, cellPx)
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun <T> EnumPickerDialog(
     title: String,
     options: List<T>,
     selected: T,
     label: (T) -> String,
+    preview: ((T) -> List<String>)? = null,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -223,6 +262,7 @@ private fun <T> EnumPickerDialog(
             LazyColumn {
                 items(options) { option ->
                     Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .selectable(
@@ -235,7 +275,13 @@ private fun <T> EnumPickerDialog(
                             .padding(vertical = 8.dp)
                     ) {
                         RadioButton(selected = option == selected, onClick = null)
-                        Text(label(option), modifier = Modifier.padding(start = 8.dp))
+                        if (preview != null) {
+                            PixelGridPreview(
+                                pattern = preview(option),
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                        Text(label(option), modifier = Modifier.padding(start = if (preview == null) 8.dp else 0.dp))
                     }
                 }
             }
