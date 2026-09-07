@@ -916,31 +916,33 @@ class CommService : Service(), CommServiceCallbacks {
 
     /** Renders the glucose value (or "n/a" when the pump reports no CGM connected) as white text
      *  on a transparent bitmap so Android uses it as the notification small icon (the system
-     *  recolors it to the notification accent color). Condensed + bold reads taller/narrower at
-     *  this size than a monospace face, which is what keeps a 3-digit value legible at 24dp.
-     *  Font size is measured and shrunk to fit -- rather than guessed from text.length, which
-     *  clipped "n/a" and some 3-digit values against the bitmap edge -- so nothing gets cut off
-     *  regardless of how wide this typeface actually draws a given string. Only called once a
+     *  recolors it to the notification accent color). Ported as-is from the original standalone
+     *  Glucose Glyph app's StatusBarIconRenderer, which already solved this exact problem:
+     *  condensed + NON-bold (bold read chunkier, not clearer, at this size) squeezed further via
+     *  textScaleX (sans-serif-condensed alone wasn't narrow enough to keep 3 digits from
+     *  clipping), with textSize walked down in small steps -- rather than solved in one ratio
+     *  calculation -- until the measured width actually fits. Only called once a
      *  CurrentEGVGuiDataResponse has actually arrived -- otherwise the caller keeps the static
      *  pump icon instead. */
     private fun createCgmNotifIcon(text: String): IconCompat {
-        val size = 128
+        val size = 96
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.WHITE
-            typeface = android.graphics.Typeface.create(
-                "sans-serif-condensed", android.graphics.Typeface.BOLD)
+            typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
             textAlign = Paint.Align.CENTER
+            textScaleX = 0.78f
         }
-        val maxWidth = size * 0.86f
-        paint.textSize = size * 0.90f
-        val measuredWidth = paint.measureText(text)
-        if (measuredWidth > maxWidth) {
-            paint.textSize *= maxWidth / measuredWidth
+        var textSize = size * 1.35f
+        paint.textSize = textSize
+        val maxTextWidth = size * 0.99f
+        while (paint.measureText(text) > maxTextWidth && textSize > 16f) {
+            textSize -= 2f
+            paint.textSize = textSize
         }
-        val yOffset = (paint.descent() - paint.ascent()) / 2f - paint.descent()
-        canvas.drawText(text, size / 2f, size / 2f + yOffset, paint)
+        val y = size / 2f - (paint.descent() + paint.ascent()) / 2f
+        canvas.drawText(text, size / 2f, y, paint)
         return IconCompat.createWithBitmap(bmp)
     }
 
