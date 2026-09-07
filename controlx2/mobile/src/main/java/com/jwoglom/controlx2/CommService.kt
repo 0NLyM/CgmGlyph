@@ -636,6 +636,7 @@ class CommService : Service(), CommServiceCallbacks {
         var iobUnits: Double? = null,
         var cartridgeRemainingUnits: Int? = null,
         var cgmMgdl: Int? = null,
+        var cgmReceived: Boolean = false,
         var cgmTrendArrow: String = "",
     )
 
@@ -662,8 +663,9 @@ class CommService : Service(), CommServiceCallbacks {
             }
             is CurrentEGVGuiDataResponse -> {
                 val newMgdl = message.cgmReading.takeIf { it > 0 }
-                changed = currentPumpData.cgmMgdl != newMgdl
+                changed = currentPumpData.cgmMgdl != newMgdl || !currentPumpData.cgmReceived
                 currentPumpData.cgmMgdl = newMgdl
+                currentPumpData.cgmReceived = true
                 currentPumpData.cgmTrendArrow = cgmTrendArrow(message.trendRate)
             }
         }
@@ -876,8 +878,10 @@ class CommService : Service(), CommServiceCallbacks {
         }
 
         var contentText = ""
-        currentPumpData.cgmMgdl?.let {
-            contentText += "${it}${currentPumpData.cgmTrendArrow}\u00A0\u00A0\u00A0"
+        if (currentPumpData.cgmReceived) {
+            val cgmText = currentPumpData.cgmMgdl?.toString() ?: "n/a"
+            val arrow = if (currentPumpData.cgmMgdl != null) currentPumpData.cgmTrendArrow else ""
+            contentText += "${cgmText}${arrow}\u00A0\u00A0\u00A0"
         }
         if (currentPumpData.batteryPercent != null) {
             contentText += "Battery: ${currentPumpData.batteryPercent}%\u00A0\u00A0\u00A0"
@@ -892,9 +896,11 @@ class CommService : Service(), CommServiceCallbacks {
             contentText += "    \nConnection established at: ${shortTime(it)}"
         }
 
-        val smallIcon = currentPumpData.cgmMgdl
-            ?.let { createCgmNotifIcon(it) }
-            ?: IconCompat.createWithResource(this, R.drawable.pump_notif_1d)
+        val smallIcon = if (currentPumpData.cgmReceived) {
+            createCgmNotifIcon(currentPumpData.cgmMgdl?.toString() ?: "n/a")
+        } else {
+            IconCompat.createWithResource(this, R.drawable.pump_notif_1d)
+        }
 
         return builder
             .setContentTitle(title)
@@ -908,22 +914,29 @@ class CommService : Service(), CommServiceCallbacks {
             .build()
     }
 
-    /** Renders the glucose value as white text on a transparent bitmap so Android uses it as the
-     *  notification small icon (the system recolors it to the notification accent color). Falls
-     *  back to the static pump icon when no CGM reading is available yet. */
-    private fun createCgmNotifIcon(mgdl: Int): IconCompat {
+    /** Renders the glucose value (or "n/a" when the pump reports no CGM connected) as white text
+     *  on a transparent bitmap so Android uses it as the notification small icon (the system
+     *  recolors it to the notification accent color). Condensed + bold reads taller/narrower at
+     *  this size than a monospace face, which is what makes a 3-digit value legible at 24dp.
+     *  Only called once a CurrentEGVGuiDataResponse has actually arrived -- otherwise the caller
+     *  keeps the static pump icon instead. */
+    private fun createCgmNotifIcon(text: String): IconCompat {
         val size = 128
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.WHITE
             typeface = android.graphics.Typeface.create(
-                android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
-            textSize = if (mgdl >= 100) size * 0.50f else size * 0.60f
+                "sans-serif-condensed", android.graphics.Typeface.BOLD)
+            textSize = when {
+                text.length <= 2 -> size * 0.80f
+                text.length == 3 -> size * 0.66f
+                else -> size * 0.54f
+            }
             textAlign = Paint.Align.CENTER
         }
         val yOffset = (paint.descent() - paint.ascent()) / 2f - paint.descent()
-        canvas.drawText(mgdl.toString(), size / 2f, size / 2f + yOffset, paint)
+        canvas.drawText(text, size / 2f, size / 2f + yOffset, paint)
         return IconCompat.createWithBitmap(bmp)
     }
 

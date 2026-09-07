@@ -4,7 +4,9 @@ package com.jwoglom.controlx2.presentation.screens.sections
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -47,6 +50,15 @@ import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.Trend
 
 private val SENSOR_DURATION_OPTIONS = listOf(7, 10, 14, 15, 21)
+
+/** The 5 visually distinct arrow shapes a style set defines, in reading order (up to down) --
+ *  DOUBLE_UP/SINGLE_UP share one shape, as do SINGLE_DOWN/DOUBLE_DOWN, so this list already
+ *  covers every shape the toy can actually draw without repeats. */
+private val ARROW_PREVIEW_ORDER = listOf(
+    Trend.SINGLE_UP, Trend.FORTY_FIVE_UP, Trend.FLAT, Trend.FORTY_FIVE_DOWN, Trend.SINGLE_DOWN
+)
+
+private val DIGIT_PREVIEW_ORDER = "0123456789".toList()
 
 /**
  * Personalization for the Glyph Toy: which pixel-font style each element draws with, the CGM
@@ -166,7 +178,10 @@ fun GlyphSettings(
             options = PixelFont.ArrowStyle.entries.filter { it in PixelFont.arrowSets },
             selected = arrowStyle,
             label = { it.label },
-            preview = { PixelFont.arrowSets[it]?.get(Trend.FLAT) ?: emptyList() },
+            preview = { style ->
+                val arrows = PixelFont.arrowSets[style] ?: emptyMap()
+                ARROW_PREVIEW_ORDER.mapNotNull { arrows[it] }
+            },
             onSelect = {
                 arrowStyle = it
                 settings.arrowStyle = it
@@ -180,7 +195,10 @@ fun GlyphSettings(
             options = PixelFont.DigitStyle.entries.filter { it in PixelFont.clockDigitSets },
             selected = clockDigitStyle,
             label = { it.label },
-            preview = { PixelFont.clockDigitSets[it]?.glyphs?.get('8') ?: emptyList() },
+            preview = { style ->
+                val glyphs = PixelFont.clockDigitSets[style]?.glyphs ?: emptyMap()
+                DIGIT_PREVIEW_ORDER.mapNotNull { glyphs[it] }
+            },
             onSelect = {
                 clockDigitStyle = it
                 settings.clockDigitStyle = it
@@ -194,7 +212,10 @@ fun GlyphSettings(
             options = PixelFont.DigitStyle.entries.filter { it in PixelFont.valueDigitSets },
             selected = valueDigitStyle,
             label = { it.label },
-            preview = { PixelFont.valueDigitSets[it]?.glyphs?.get('8') ?: emptyList() },
+            preview = { style ->
+                val glyphs = PixelFont.valueDigitSets[style]?.glyphs ?: emptyMap()
+                DIGIT_PREVIEW_ORDER.mapNotNull { glyphs[it] }
+            },
             onSelect = {
                 valueDigitStyle = it
                 settings.valueDigitStyle = it
@@ -245,13 +266,26 @@ private fun PixelGridPreview(pattern: List<String>, modifier: Modifier = Modifie
     }
 }
 
+/** Lays out every glyph a style defines side by side (horizontally scrollable, since 10 digits
+ *  at readable size can run wider than the dialog) so the picker shows the whole character set
+ *  instead of one representative digit/arrow. */
+@Composable
+private fun MultiGlyphPreview(patterns: List<List<String>>, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        patterns.forEach { pattern -> PixelGridPreview(pattern) }
+    }
+}
+
 @Composable
 private fun <T> EnumPickerDialog(
     title: String,
     options: List<T>,
     selected: T,
     label: (T) -> String,
-    preview: ((T) -> List<String>)? = null,
+    preview: ((T) -> List<List<String>>)? = null,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -261,8 +295,7 @@ private fun <T> EnumPickerDialog(
         text = {
             LazyColumn {
                 items(options) { option ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .selectable(
@@ -274,14 +307,21 @@ private fun <T> EnumPickerDialog(
                             )
                             .padding(vertical = 8.dp)
                     ) {
-                        RadioButton(selected = option == selected, onClick = null)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = option == selected, onClick = null)
+                            // With a full glyph-set preview available, "Stile N" adds nothing the
+                            // preview doesn't already show more usefully -- so it's only shown for
+                            // preview-less pickers (e.g. the sensor-duration dialog).
+                            if (preview == null) {
+                                Text(label(option), modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
                         if (preview != null) {
-                            PixelGridPreview(
-                                pattern = preview(option),
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                            MultiGlyphPreview(
+                                patterns = preview(option),
+                                modifier = Modifier.padding(start = 48.dp, top = 4.dp)
                             )
                         }
-                        Text(label(option), modifier = Modifier.padding(start = if (preview == null) 8.dp else 0.dp))
                     }
                 }
             }
