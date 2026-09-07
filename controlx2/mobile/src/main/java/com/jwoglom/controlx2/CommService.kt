@@ -917,9 +917,12 @@ class CommService : Service(), CommServiceCallbacks {
     /** Renders the glucose value (or "n/a" when the pump reports no CGM connected) as white text
      *  on a transparent bitmap so Android uses it as the notification small icon (the system
      *  recolors it to the notification accent color). Condensed + bold reads taller/narrower at
-     *  this size than a monospace face, which is what makes a 3-digit value legible at 24dp.
-     *  Only called once a CurrentEGVGuiDataResponse has actually arrived -- otherwise the caller
-     *  keeps the static pump icon instead. */
+     *  this size than a monospace face, which is what keeps a 3-digit value legible at 24dp.
+     *  Font size is measured and shrunk to fit -- rather than guessed from text.length, which
+     *  clipped "n/a" and some 3-digit values against the bitmap edge -- so nothing gets cut off
+     *  regardless of how wide this typeface actually draws a given string. Only called once a
+     *  CurrentEGVGuiDataResponse has actually arrived -- otherwise the caller keeps the static
+     *  pump icon instead. */
     private fun createCgmNotifIcon(text: String): IconCompat {
         val size = 128
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -928,12 +931,13 @@ class CommService : Service(), CommServiceCallbacks {
             color = android.graphics.Color.WHITE
             typeface = android.graphics.Typeface.create(
                 "sans-serif-condensed", android.graphics.Typeface.BOLD)
-            textSize = when {
-                text.length <= 2 -> size * 0.80f
-                text.length == 3 -> size * 0.66f
-                else -> size * 0.54f
-            }
             textAlign = Paint.Align.CENTER
+        }
+        val maxWidth = size * 0.86f
+        paint.textSize = size * 0.90f
+        val measuredWidth = paint.measureText(text)
+        if (measuredWidth > maxWidth) {
+            paint.textSize *= maxWidth / measuredWidth
         }
         val yOffset = (paint.descent() - paint.ascent()) / 2f - paint.descent()
         canvas.drawText(text, size / 2f, size / 2f + yOffset, paint)

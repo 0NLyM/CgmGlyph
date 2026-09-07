@@ -4,7 +4,6 @@ package com.jwoglom.controlx2.presentation.screens.sections
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,7 +35,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -266,16 +264,18 @@ private fun PixelGridPreview(pattern: List<String>, modifier: Modifier = Modifie
     }
 }
 
-/** Lays out every glyph a style defines side by side (horizontally scrollable, since 10 digits
- *  at readable size can run wider than the dialog) so the picker shows the whole character set
- *  instead of one representative digit/arrow. */
+/** Lays out every glyph a style defines in rows of up to [perRow] side by side, wrapping to a
+ *  new row rather than scrolling -- 10 digits in one row ran wider than the dialog and got
+ *  clipped by its edge, so digit styles wrap to two rows of 5; arrow styles (5 glyphs) still
+ *  fit on a single row. */
 @Composable
-private fun MultiGlyphPreview(patterns: List<List<String>>, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        patterns.forEach { pattern -> PixelGridPreview(pattern) }
+private fun MultiGlyphPreview(patterns: List<List<String>>, modifier: Modifier = Modifier, perRow: Int = 5) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        patterns.chunked(perRow).forEach { rowPatterns ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                rowPatterns.forEach { pattern -> PixelGridPreview(pattern) }
+            }
+        }
     }
 }
 
