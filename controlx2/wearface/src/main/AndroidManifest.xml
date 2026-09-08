@@ -65,6 +65,15 @@
                 android:name="androidx.wear.watchface.MULTIPLE_INSTANCES_ALLOWED"
                 android:value="true" />
         </service>
+
+        <service
+            android:name="it.mattia.controlx2face.data.FaceMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:pathPrefix="/from-pump/receive-message" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
