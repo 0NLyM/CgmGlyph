@@ -1,5 +1,6 @@
 package it.mattia.controlx2face.minimalgrid
 
+import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -11,6 +12,8 @@ import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
+import it.mattia.controlx2face.data.FaceStateHolder
+import it.mattia.controlx2face.data.Staleness
 import it.mattia.controlx2face.render.FacePalette
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -27,6 +30,7 @@ class MinimalGridRenderer(
     watchState: WatchState,
     private val complicationSlotsManager: ComplicationSlotsManager,
     canvasType: Int,
+    private val context: Context,
 ) : Renderer.CanvasRenderer2<MinimalGridRenderer.Assets>(
     surfaceHolder,
     currentUserStyleRepository,
@@ -69,8 +73,6 @@ class MinimalGridRenderer(
         timePaint.isAntiAlias = !lowBit
         datePaint.isAntiAlias = !lowBit
 
-        // Outlined numerals in ambient: the canonical Nothing/CMF always-on look, and it cuts lit
-        // pixels by roughly 85% against a filled face.
         if (ambient) {
             timePaint.style = Paint.Style.STROKE
             timePaint.strokeWidth = shorterSide * AMBIENT_STROKE_RATIO
@@ -79,15 +81,17 @@ class MinimalGridRenderer(
         }
 
         timePaint.textSize = shorterSide * MinimalGridLayout.TIME_SIZE_RATIO
+        val timeText = "%02d:%02d".format(zonedDateTime.hour, zonedDateTime.minute)
         canvas.drawText(
-            "%02d:%02d".format(zonedDateTime.hour, zonedDateTime.minute),
+            timeText,
             bounds.exactCenterX(),
             bounds.top + bounds.height() * MinimalGridLayout.TIME_BASELINE_Y,
             timePaint,
         )
 
-        // Everything below the time is chrome: dropped in ambient, where only the hour matters.
         if (!ambient) {
+            val snapshot = FaceStateHolder.getInstance(context).getSnapshot()
+
             datePaint.textSize = shorterSide * MinimalGridLayout.DATE_SIZE_RATIO
             canvas.drawText(
                 dateFormatter.format(zonedDateTime).uppercase(Locale.getDefault()),

@@ -8,6 +8,9 @@ import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
+import it.mattia.controlx2face.data.FaceStateHolder
+import it.mattia.controlx2face.data.GlucoseRange
+import it.mattia.controlx2face.data.Staleness
 import it.mattia.controlx2face.render.DotGrid
 import it.mattia.controlx2face.render.FacePalette
 import it.mattia.pixelfont.PixelFont
@@ -30,6 +33,7 @@ class DotMatrixRenderer(
     currentUserStyleRepository: CurrentUserStyleRepository,
     watchState: WatchState,
     canvasType: Int,
+    private val context: android.content.Context,
 ) : Renderer.CanvasRenderer2<DotMatrixRenderer.Assets>(
     surfaceHolder,
     currentUserStyleRepository,
@@ -47,35 +51,82 @@ class DotMatrixRenderer(
 
     private val litPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = FacePalette.LIT }
     private val unlitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = FacePalette.UNLIT }
+    private val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = FacePalette.ACCENT }
 
     override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: Assets) {
         val ambient = renderParameters.drawMode == DrawMode.AMBIENT
         canvas.drawColor(FacePalette.BACKGROUND)
 
-        // Low-bit ambient quantises colours hard and antialiasing smears the result, so drop it
-        // there. Everything else keeps smooth dots.
         val lowBit = ambient && watchState.hasLowBitAmbient
         litPaint.isAntiAlias = !lowBit
 
         val glyphs = PixelFont.clockDigitSets.getValue(PixelFont.DigitStyle.CURRENT)
         val pitch = minOf(bounds.width(), bounds.height()) * CLOCK_PITCH_RATIO
-        val text = "%02d:%02d".format(zonedDateTime.hour, zonedDateTime.minute)
 
-        val x = bounds.exactCenterX() - DotGrid.measureText(text, glyphs, pitch) / 2f
-        val y = bounds.top + bounds.height() * CLOCK_TOP_RATIO
+        val clockText = "%02d:%02d".format(zonedDateTime.hour, zonedDateTime.minute)
+        val clockX = bounds.exactCenterX() - DotGrid.measureText(clockText, glyphs, pitch) / 2f
+        val clockY = bounds.top + bounds.height() * CLOCK_TOP_RATIO
 
         DotGrid.drawText(
             canvas = canvas,
-            text = text,
+            text = clockText,
             glyphs = glyphs,
-            x = x,
-            y = y,
+            x = clockX,
+            y = clockY,
             pitch = pitch,
             litPaint = litPaint,
-            // Ambient draws lit dots only: a permanently-lit dark grid is a burn-in pattern and
-            // costs power for something nobody reads with the wrist down.
             unlitPaint = if (ambient) null else unlitPaint,
         )
+
+        if (!ambient) {
+            val snapshot = FaceStateHolder.getInstance(context).getSnapshot()
+            val glucosePaint = if (snapshot.range == GlucoseRange.HIGH || snapshot.range == GlucoseRange.LOW) {
+                accentPaint
+            } else {
+                litPaint
+            }
+            renderGlucoseAndTrend(canvas, bounds, pitch, glyphs, glucosePaint, unlitPaint, snapshot)
+        }
+    }
+
+    private fun renderGlucoseAndTrend(
+        canvas: Canvas,
+        bounds: Rect,
+        pitch: Float,
+        glyphs: Map<Char, List<List<Boolean>>>,
+        glucosePaint: Paint,
+        unlitPaint: Paint,
+        snapshot: it.mattia.controlx2face.data.FaceSnapshot,
+    ) {
+        val glucoseText = when {
+            snapshot.glucoseMgdl == null -> "n/a"
+            snapshot.staleness == Staleness.DEAD -> "---"
+            else -> snapshot.glucoseMgdl.toString()
+        }
+
+        val glucosePitchRatio = 0.0267f
+        val glucosePitch = minOf(bounds.width(), bounds.height()) * glucosePitchRatio
+        val glucoseX = bounds.exactCenterX() - DotGrid.measureText(glucoseText, PixelFont.valueDigitSets.getValue(PixelFont.DigitStyle.CURRENT), glucosePitch) / 2f
+        val glucoseY = bounds.top + bounds.height() * 0.45f
+
+        DotGrid.drawText(
+            canvas = canvas,
+            text = glucoseText,
+            glyphs = PixelFont.valueDigitSets.getValue(PixelFont.DigitStyle.CURRENT),
+            x = glucoseX,
+            y = glucoseY,
+            pitch = glucosePitch,
+            litPaint = glucosePaint,
+            unlitPaint = unlitPaint,
+        )
+
+        if (snapshot.trend != null && snapshot.staleness != Staleness.DEAD) {
+            val trendGlyph = PixelFont.arrowSets.getValue(PixelFont.DigitStyle.CURRENT)[snapshot.trend]
+            val trendPitch = glucosePitch * 0.8f
+            val trendX = bounds.exactCenterX() + glucosePitch
+            val trendY = glucoseY - glucosePitch
+            DotGrid.drawGlyph(canvas, trendGlyph, trendX, trendY, trendPitch, glucosePaint, unlitPaint)
+        }
     }
 
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: Assets) {

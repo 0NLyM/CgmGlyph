@@ -30,6 +30,7 @@ class DotMatrixWatchFaceService : WatchFaceService() {
             currentUserStyleRepository = currentUserStyleRepository,
             watchState = watchState,
             canvasType = CanvasType.HARDWARE,
+            context = this,
         )
         return WatchFace(WatchFaceType.DIGITAL, renderer)
     }

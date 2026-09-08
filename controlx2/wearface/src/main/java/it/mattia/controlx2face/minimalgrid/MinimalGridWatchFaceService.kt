@@ -85,6 +85,7 @@ class MinimalGridWatchFaceService : WatchFaceService() {
             watchState = watchState,
             complicationSlotsManager = complicationSlotsManager,
             canvasType = CanvasType.HARDWARE,
+            context = this,
         )
         return WatchFace(WatchFaceType.DIGITAL, renderer)
     }
