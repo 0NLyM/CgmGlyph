@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Watch face services are declared here, in the library's own manifest, rather than in :wear's.
+    The manifest merger folds them into the app APK either way, and keeping them here means
+    :wear/src/main/AndroidManifest.xml -- an upstream file -- never has to be touched at all.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <service
+            android:name="it.mattia.controlx2face.dotmatrix.DotMatrixWatchFaceService"
+            android:exported="true"
+            android:label="@string/wf_dot_matrix_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/wf_watch_face" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview"
+                android:resource="@drawable/wf_preview_dot_matrix" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview_circular"
+                android:resource="@drawable/wf_preview_dot_matrix" />
+            <!--
+                Makes the system-supplied editor appear on Wear OS 3+, which renders the
+                UserStyleSchema and every complication slot without us shipping an editor
+                Activity of our own.
+            -->
+            <meta-data
+                android:name="com.google.android.wearable.watchface.wearableConfigurationAction"
+                android:value="androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR" />
+            <meta-data
+                android:name="androidx.wear.watchface.MULTIPLE_INSTANCES_ALLOWED"
+                android:value="true" />
+        </service>
+    </application>
+
+</manifest>

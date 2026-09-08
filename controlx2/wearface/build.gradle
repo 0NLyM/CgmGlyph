@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Nothing-styled Wear OS watch faces plus the complication providers that feed them.
+//
+// Deliberately depends on NOTHING inside this project except :pixelfont (shared glyph tables)
+// and :shared (four symbols: PumpMessageSerializer, MessagePaths, GlucoseUnit, GlucoseConverter).
+// It must never depend on :wear, :clientcomm, :pumpcomm, :db or :glyph -- :wear depends on this
+// module, so any edge back the other way would be a cycle, and :glyph in particular would drag
+// the Nothing Glyph Matrix .aar onto a device that can't run it.
+android {
+    namespace 'it.mattia.controlx2face'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 30
+        targetSdk 33
+
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+dependencies {
+    implementation project(':pixelfont')
+    implementation project(path: ':shared')
+
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'com.google.android.gms:play-services-wearable:19.0.0'
+
+    // Same versions :wear already resolves, so the two never disagree on the classpath.
+    implementation "androidx.wear.watchface:watchface:${project.androidx_watchface_version}"
+    implementation "androidx.wear.watchface:watchface-complications-data-source:${project.androidx_watchface_version}"
+    implementation "androidx.wear.watchface:watchface-complications-data-source-ktx:${project.androidx_watchface_version}"
+    implementation "androidx.wear.watchface:watchface-complications-rendering:${project.androidx_watchface_version}"
+    implementation "androidx.wear.watchface:watchface-editor:${project.androidx_watchface_version}"
+
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+
+    // Typed pump message classes only -- the BLE/connection layer stays in :pumpcomm, exactly as
+    // :glyph does it on the phone side.
+    if (project.use_local_pumpx2) {
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-messages/${project.pumpx2_version}/pumpx2-messages-${project.pumpx2_version}.jar")
+        implementation files("${project.m2_repository}/com/jwoglom/pumpx2/pumpx2-shared/${project.pumpx2_version}/pumpx2-shared-${project.pumpx2_version}.jar")
+    } else {
+        implementation "com.github.jwoglom.pumpX2:pumpx2-messages:v${project.pumpx2_version}"
+        implementation "com.github.jwoglom.pumpX2:pumpx2-shared:v${project.pumpx2_version}"
+    }
+
+    testImplementation 'junit:junit:4.13.2'
+}

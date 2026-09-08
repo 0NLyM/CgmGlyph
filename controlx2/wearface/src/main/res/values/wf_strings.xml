@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every name here is wf_-prefixed so nothing collides when merged into :wear's resources. -->
+<resources>
+    <string name="wf_dot_matrix_name">ControlX2 Dot Matrix</string>
+</resources>

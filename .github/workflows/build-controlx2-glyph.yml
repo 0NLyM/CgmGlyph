@@ -45,7 +45,7 @@ jobs:
       # Fails in seconds rather than minutes when a shared module is broken, with an error that
       # points at the module instead of at whichever app happened to compile it first.
       - name: Build shared library modules
-        run: ./gradlew :pixelfont:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
+        run: ./gradlew :pixelfont:assembleRelease :wearface:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
 
       - name: Build release APK
         run: ./gradlew :mobile:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}

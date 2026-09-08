@@ -157,6 +157,7 @@ dependencies {
     implementation project(path: ':pumpcomm')
     implementation project(path: ':clientcomm')
     implementation project(path: ':db')
+    implementation project(path: ':wearface')
 
     // androidx
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
