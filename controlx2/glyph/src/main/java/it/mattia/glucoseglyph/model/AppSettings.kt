@@ -2,7 +2,7 @@ package it.mattia.glucoseglyph.model
 
 import android.content.Context
 import android.content.SharedPreferences
-import it.mattia.glucoseglyph.glyph.PixelFont
+import it.mattia.pixelfont.PixelFont
 
 /** Thin wrapper around SharedPreferences holding the Glyph Toy's display personalization. */
 class AppSettings(context: Context) {

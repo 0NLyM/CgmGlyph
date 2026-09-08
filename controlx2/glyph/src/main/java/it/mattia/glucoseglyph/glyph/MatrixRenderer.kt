@@ -2,6 +2,7 @@ package it.mattia.glucoseglyph.glyph
 
 import it.mattia.glucoseglyph.model.GlucoseReading
 import it.mattia.glucoseglyph.model.Trend
+import it.mattia.pixelfont.PixelFont
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.atan2

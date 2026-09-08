@@ -1,12 +1,14 @@
-package it.mattia.glucoseglyph.glyph
-
-import it.mattia.glucoseglyph.model.Trend
+package it.mattia.pixelfont
 
 /**
- * Pixel fonts for the Glyph Matrix, each offered in a few selectable [DigitStyle]/[ArrowStyle]
- * variants (see [AppSettings][it.mattia.glucoseglyph.model.AppSettings] for the stored choice):
+ * Pixel fonts, each offered in a few selectable [DigitStyle]/[ArrowStyle] variants (see
+ * [AppSettings][it.mattia.glucoseglyph.model.AppSettings] for the phone's stored choice):
  * a glucose-value digit font, a clock digit font, and a set of 5x5 trend-arrow glyphs (plus a
  * fixed "X" for an expired sensor, which isn't part of the style choice). '1' = lit pixel.
+ *
+ * Lives in its own dependency-free module so the phone's Glyph Matrix toy (:glyph) and the Wear
+ * OS watch faces (:wearface) render from one shared set of glyph tables -- retouching a digit
+ * here updates both surfaces at once, and neither drags the other's platform SDK along.
  */
 object PixelFont {
 

@@ -31,6 +31,11 @@ android {
 }
 
 dependencies {
+    // Shared glyph tables, also consumed by the Wear OS watch faces. `api` rather than
+    // `implementation` because :mobile's GlyphSettings screen reads PixelFont through this
+    // module -- with `implementation` it would drop off :mobile's compile classpath.
+    api project(':pixelfont')
+
     // Nothing Phone Glyph Matrix SDK -- local aar, no Maven distribution.
     implementation files('libs/glyphsdk_0606.aar')
 

@@ -43,7 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.jwoglom.controlx2.presentation.components.HeaderLine
-import it.mattia.glucoseglyph.glyph.PixelFont
+import it.mattia.pixelfont.PixelFont
 import it.mattia.glucoseglyph.model.AppSettings
 import it.mattia.glucoseglyph.model.Trend
 

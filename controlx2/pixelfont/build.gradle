@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Pure-data module: the pixel-font glyph tables and the Trend enum that indexes the arrow set.
+// Deliberately has NO dependencies at all -- not on Android beyond the library plugin itself,
+// not on pumpX2, and above all not on the Nothing Glyph Matrix SDK that :glyph bundles. That is
+// what lets both the phone's Glyph Toy (:glyph) and the watch faces (:wearface) draw from the
+// exact same glyph tables without the watch APK ever pulling in a proprietary phone SDK.
+android {
+    namespace 'it.mattia.pixelfont'
+    compileSdk 36
+
+    defaultConfig {
+        // Lower than :wearface's 30 so :glyph (minSdk 26) can consume it too.
+        minSdk 26
+        targetSdk 35
+
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Intentionally empty: this module contributes only Kotlin data (glyph tables), no components,
+    permissions or resources. Consumers declare whatever they need in their own manifests.
+-->
+<manifest />
