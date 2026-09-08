@@ -13,9 +13,13 @@ class FaceMessageListenerService : WearableListenerService() {
         try {
             val payload = messageEvent.data
             val deserialized = PumpMessageSerializer.fromBytes(payload)
-            Log.d(TAG, "onMessageReceived: $deserialized")
+            Log.d(TAG, "onMessageReceived: ${deserialized.javaClass.simpleName}")
+
+            val state = FaceStateHolder.getInstance(this)
+            val bridge = FacePumpMessageBridge(FacePrefs(this))
+            bridge.processPumpMessage(deserialized)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to deserialize pump message", e)
+            Log.e(TAG, "Failed to process pump message", e)
         }
     }
 

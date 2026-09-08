@@ -380,6 +380,16 @@ class WearPumpCommService : Service(), CommServiceCallbacks {
     // --- Debug API callbacks (no-op on watch) ---
     override fun onPumpMessageReceived(message: com.jwoglom.pumpx2.pump.messages.Message, source: SendType) {
         Timber.d("WearPumpCommService: onPumpMessageReceived: $message source=$source")
+        // Notify the wearface module of pump messages when the watch is pump-host.
+        // The listener service receives messages via the Data Layer, but this device-local
+        // callback offers a direct path for PUMP_HOST role only (WearableListenerService
+        // excludes the local sender); include it unconditionally so it's available the moment
+        // pump-host is configured, even before pairing.
+        if (StatePrefs(applicationContext).deviceRole() == DeviceRole.PUMP_HOST) {
+            it.mattia.controlx2face.data.FacePumpMessageBridge(
+                it.mattia.controlx2face.data.FacePrefs(applicationContext)
+            ).processPumpMessage(message as com.jwoglom.controlx2.shared.Parcelable)
+        }
     }
 
     override fun onPumpCriticalError(error: TandemError, source: SendType) {
