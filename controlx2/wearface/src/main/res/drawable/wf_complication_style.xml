@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Complication styling for both faces: no chrome at all, so a complication reads as part of the
+    layout rather than as a widget dropped onto it. ComplicationDrawable handles the interactive
+    -> ambient switch itself via the <ambient> child.
+-->
+<complicationDrawable xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:backgroundColor="@android:color/transparent"
+    app:borderStyle="none"
+    app:iconColor="#FFFFFF"
+    app:textColor="#FFFFFF"
+    app:textSize="18sp"
+    app:titleColor="#8A8A8A">
+
+    <ambient
+        app:backgroundColor="@android:color/transparent"
+        app:borderStyle="none"
+        app:iconColor="#FFFFFF"
+        app:textColor="#FFFFFF"
+        app:titleColor="#FFFFFF" />
+
+</complicationDrawable>

@@ -38,6 +38,33 @@
                 android:name="androidx.wear.watchface.MULTIPLE_INSTANCES_ALLOWED"
                 android:value="true" />
         </service>
+
+        <service
+            android:name="it.mattia.controlx2face.minimalgrid.MinimalGridWatchFaceService"
+            android:exported="true"
+            android:label="@string/wf_minimal_grid_name"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/wf_watch_face" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview"
+                android:resource="@drawable/wf_preview_minimal_grid" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview_circular"
+                android:resource="@drawable/wf_preview_minimal_grid" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.wearableConfigurationAction"
+                android:value="androidx.wear.watchface.editor.action.WATCH_FACE_EDITOR" />
+            <meta-data
+                android:name="androidx.wear.watchface.MULTIPLE_INSTANCES_ALLOWED"
+                android:value="true" />
+        </service>
     </application>
 
 </manifest>
