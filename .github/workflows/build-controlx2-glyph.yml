@@ -9,7 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Two APKs (phone + watch) plus the shared library modules; 30 was tight for one.
+    timeout-minutes: 45
     permissions:
       contents: write
     defaults:
@@ -41,8 +42,19 @@ jobs:
       # mobile/build.gradle's signingConfigs.release defaults; no GitHub Secrets needed.
       # glyphBuildNumber feeds into controlx2_version (root build.gradle) so the version
       # string shown in the app's own Settings screen carries this same run number.
+      # Fails in seconds rather than minutes when a shared module is broken, with an error that
+      # points at the module instead of at whichever app happened to compile it first.
+      - name: Build shared library modules
+        run: ./gradlew :pixelfont:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
+
       - name: Build release APK
         run: ./gradlew :mobile:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
+
+      # The watch app is a separate APK but deliberately shares this release and this build
+      # number: phone and watch talk over the Data Layer and a mismatched pair is a real failure
+      # mode, so they should never be installable at independently drifting versions.
+      - name: Build wear release APK
+        run: ./gradlew :wear:assembleRelease --stacktrace -PglyphBuildNumber=${{ github.run_number }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -55,7 +67,9 @@ jobs:
       # phone. A Release asset downloads directly (no login, no unzipping).
       - name: Rename APK for release
         working-directory: . # override the job's controlx2/ default: both paths below are repo-root-relative
-        run: cp controlx2/mobile/build/outputs/apk/release/mobile-release.apk controlx2-glyph-debug.apk
+        run: |
+          cp controlx2/mobile/build/outputs/apk/release/mobile-release.apk controlx2-glyph-debug.apk
+          cp controlx2/wear/build/outputs/apk/release/wear-release.apk controlx2-glyph-wear.apk
 
       # Each push gets its own tagged release (build number in both the tag and the title,
       # matching the "-glyph.N" suffix the app's Settings screen shows) instead of overwriting
@@ -70,9 +84,17 @@ jobs:
           tag_name: controlx2-glyph-v${{ github.run_number }}
           name: "ControlX2 Glyph build #${{ github.run_number }}"
           body: |
-            APK di debug, non firmato per il Play Store (installazione diretta/sideload).
+            APK non firmati per il Play Store (installazione diretta/sideload).
             Build automatica dal branch `controlx2-glyph`, commit ${{ github.sha }}.
             La versione mostrata in Impostazioni nell'app sarà `1.0.0-20260504-glyph.${{ github.run_number }}`.
+
+            - `controlx2-glyph-debug.apk` — app per il telefono.
+            - `controlx2-glyph-wear.apk` — app per l'orologio Wear OS, da installare con
+              `adb install -r controlx2-glyph-wear.apk` via debug Wi-Fi. Va tenuta allo stesso
+              numero di build dell'app telefono: le due comunicano fra loro e una coppia
+              disallineata può non parlarsi.
           prerelease: false
           make_latest: true
-          files: controlx2-glyph-debug.apk
+          files: |
+            controlx2-glyph-debug.apk
+            controlx2-glyph-wear.apk

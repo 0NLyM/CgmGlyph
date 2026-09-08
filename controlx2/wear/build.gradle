@@ -20,7 +20,13 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.jwoglom.controlx2"
+        // Must match :mobile's applicationId exactly: the Wearable Data Layer only routes
+        // MessageClient traffic between a phone app and a watch app that share a package name
+        // and signing certificate. :mobile was renamed to com.onlym.controlx2glyph to stop
+        // colliding with upstream ControlX2, and leaving :wear behind on the old id silently
+        // broke that pairing. (namespace stays com.jwoglom.controlx2 so `.ClassName` manifest
+        // references and R/BuildConfig keep resolving -- same shape :mobile already uses.)
+        applicationId "com.onlym.controlx2glyph"
         minSdk 30
         targetSdk 33
         versionCode 1
