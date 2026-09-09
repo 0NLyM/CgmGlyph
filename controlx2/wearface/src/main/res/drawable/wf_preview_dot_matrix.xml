@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Placeholder picker thumbnail. To be replaced with a real 450x450 screenshot of the finished
-    face (`adb exec-out screencap -p`) once the renderer is done -- some launchers render the
+    face (`adb exec-out screencap -p`) once the renderer is done. Some launchers render the
     picker from a bitmap and a vector reads poorly there.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
