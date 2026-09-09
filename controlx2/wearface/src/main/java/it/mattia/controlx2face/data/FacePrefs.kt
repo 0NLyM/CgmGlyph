@@ -2,6 +2,7 @@ package it.mattia.controlx2face.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import it.mattia.pixelfont.Trend
 
 class FacePrefs(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(

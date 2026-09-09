@@ -31,7 +31,7 @@ private const val CLOCK_TOP_RATIO = 0.213f
 class DotMatrixRenderer(
     surfaceHolder: SurfaceHolder,
     currentUserStyleRepository: CurrentUserStyleRepository,
-    watchState: WatchState,
+    private val watchState: WatchState,
     canvasType: Int,
     private val context: android.content.Context,
 ) : Renderer.CanvasRenderer2<DotMatrixRenderer.Assets>(
@@ -85,7 +85,7 @@ class DotMatrixRenderer(
             } else {
                 litPaint
             }
-            renderGlucoseAndTrend(canvas, bounds, pitch, glyphs, glucosePaint, unlitPaint, snapshot)
+            renderGlucoseAndTrend(canvas, bounds, pitch, glucosePaint, unlitPaint, snapshot)
         }
     }
 
@@ -93,7 +93,6 @@ class DotMatrixRenderer(
         canvas: Canvas,
         bounds: Rect,
         pitch: Float,
-        glyphs: Map<Char, List<List<Boolean>>>,
         glucosePaint: Paint,
         unlitPaint: Paint,
         snapshot: it.mattia.controlx2face.data.FaceSnapshot,
@@ -121,7 +120,7 @@ class DotMatrixRenderer(
         )
 
         if (snapshot.trend != null && snapshot.staleness != Staleness.DEAD) {
-            val trendGlyph = PixelFont.arrowSets.getValue(PixelFont.DigitStyle.CURRENT)[snapshot.trend]
+            val trendGlyph = PixelFont.arrowSets.getValue(PixelFont.ArrowStyle.CURRENT).getValue(snapshot.trend)
             val trendPitch = glucosePitch * 0.8f
             val trendX = bounds.exactCenterX() + glucosePitch
             val trendY = glucoseY - glucosePitch

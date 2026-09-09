@@ -27,7 +27,7 @@ private const val AMBIENT_STROKE_RATIO = 0.0033f
 class MinimalGridRenderer(
     surfaceHolder: SurfaceHolder,
     currentUserStyleRepository: CurrentUserStyleRepository,
-    watchState: WatchState,
+    private val watchState: WatchState,
     private val complicationSlotsManager: ComplicationSlotsManager,
     canvasType: Int,
     private val context: Context,
