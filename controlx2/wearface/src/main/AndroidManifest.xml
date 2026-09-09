@@ -2,7 +2,7 @@
 <!--
     Watch face services are declared here, in the library's own manifest, rather than in :wear's.
     The manifest merger folds them into the app APK either way, and keeping them here means
-    :wear/src/main/AndroidManifest.xml -- an upstream file -- never has to be touched at all.
+    :wear/src/main/AndroidManifest.xml (an upstream file) never has to be touched at all.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
