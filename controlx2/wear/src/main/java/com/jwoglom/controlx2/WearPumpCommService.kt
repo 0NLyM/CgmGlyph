@@ -388,7 +388,7 @@ class WearPumpCommService : Service(), CommServiceCallbacks {
         if (StatePrefs(applicationContext).deviceRole() == DeviceRole.PUMP_HOST) {
             it.mattia.controlx2face.data.FacePumpMessageBridge(
                 it.mattia.controlx2face.data.FacePrefs(applicationContext)
-            ).processPumpMessage(message as com.jwoglom.controlx2.shared.Parcelable)
+            ).processPumpMessage(message)
         }
     }
 
