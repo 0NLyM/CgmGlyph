@@ -70,6 +70,7 @@ import android.graphics.Paint
 import com.jwoglom.pumpx2.pump.messages.response.currentStatus.ControlIQIOBResponse
 import com.jwoglom.pumpx2.pump.messages.response.currentStatus.CurrentBatteryAbstractResponse
 import com.jwoglom.pumpx2.pump.messages.response.currentStatus.CurrentEGVGuiDataResponse
+import com.jwoglom.pumpx2.pump.messages.response.currentStatus.HomeScreenMirrorResponse
 import com.jwoglom.pumpx2.pump.messages.response.currentStatus.InsulinStatusResponse
 import com.welie.blessed.BluetoothPeripheral
 import kotlinx.coroutines.CoroutineScope
@@ -637,7 +638,8 @@ class CommService : Service(), CommServiceCallbacks {
         var cartridgeRemainingUnits: Int? = null,
         var cgmMgdl: Int? = null,
         var cgmReceived: Boolean = false,
-        var cgmTrendArrow: String = "",
+        var cgmTrendRate: Int = 0,
+        var cgmTrendIconId: Int? = null,
     )
 
     private val currentPumpData: DisplayablePumpData = DisplayablePumpData()
@@ -666,7 +668,12 @@ class CommService : Service(), CommServiceCallbacks {
                 changed = currentPumpData.cgmMgdl != newMgdl || !currentPumpData.cgmReceived
                 currentPumpData.cgmMgdl = newMgdl
                 currentPumpData.cgmReceived = true
-                currentPumpData.cgmTrendArrow = cgmTrendArrow(message.trendRate)
+                currentPumpData.cgmTrendRate = message.trendRate
+            }
+            is HomeScreenMirrorResponse -> {
+                val newIconId = message.cgmTrendIcon?.id()
+                changed = currentPumpData.cgmTrendIconId != newIconId
+                currentPumpData.cgmTrendIconId = newIconId
             }
         }
 
@@ -676,12 +683,39 @@ class CommService : Service(), CommServiceCallbacks {
         }
     }
 
-    private fun cgmTrendArrow(trendRate: Int): String = when {
-        trendRate >= 3 -> "⇈" // ⇈
-        trendRate >= 1 -> "↑" // ↑
-        trendRate > -1 -> "→" // →
-        trendRate > -3 -> "↓" // ↓
-        else -> "⇊"           // ⇊
+    /**
+     * Prefers the pump's own trend icon from HomeScreenMirrorResponse (the exact icon
+     * ControlX2's Dashboard shows, and the same source the Glyph Toy and watch faces use) over
+     * the trendRate heuristic below, which only serves until the first HomeScreenMirrorResponse
+     * arrives -- trendRate alone previously drove this and used the wrong scale, showing a
+     * double-arrow for an ordinary single-step trend.
+     */
+    private fun cgmTrendArrow(): String {
+        val iconId = currentPumpData.cgmTrendIconId
+        return if (iconId != null) cgmTrendArrowFromIconId(iconId) else cgmTrendArrowFromRate(currentPumpData.cgmTrendRate)
+    }
+
+    private fun cgmTrendArrowFromIconId(id: Int): String = when (id) {
+        1 -> "⇈"
+        2 -> "↑"
+        3 -> "↗"
+        4 -> "→"
+        5 -> "↘"
+        6 -> "↓"
+        7 -> "⇊"
+        else -> ""
+    }
+
+    // Same thresholds as it.mattia.pixelfont.Trend.fromTrendRate, so the fallback (used only
+    // before the first HomeScreenMirrorResponse) agrees with the Glyph Toy and watch faces.
+    private fun cgmTrendArrowFromRate(trendRate: Int): String = when {
+        trendRate <= -3 -> "⇊"
+        trendRate <= -2 -> "↓"
+        trendRate <= -1 -> "↘"
+        trendRate < 1 -> "→"
+        trendRate < 2 -> "↗"
+        trendRate < 3 -> "↑"
+        else -> "⇈"
     }
 
     private fun sendInitPumpFinderComm() {
@@ -880,7 +914,7 @@ class CommService : Service(), CommServiceCallbacks {
         var contentText = ""
         if (currentPumpData.cgmReceived) {
             val cgmText = currentPumpData.cgmMgdl?.toString() ?: "n/a"
-            val arrow = if (currentPumpData.cgmMgdl != null) currentPumpData.cgmTrendArrow else ""
+            val arrow = if (currentPumpData.cgmMgdl != null) cgmTrendArrow() else ""
             contentText += "${cgmText}${arrow}\u00A0\u00A0\u00A0"
         }
         if (currentPumpData.batteryPercent != null) {
